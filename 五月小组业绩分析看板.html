@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五月小组业绩分析报表</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f6fa;color:#2c3e50}
+.header{background:#fff;padding:20px 32px;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;font-weight:600}
+.header .subtitle{font-size:13px;color:#888;margin-top:4px}
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;padding:24px 32px}
+.kpi-card{background:#fff;border:1px solid #eee;border-radius:6px;padding:20px;position:relative}
+.kpi-card .label{font-size:13px;color:#888;margin-bottom:8px}
+.kpi-card .value{font-size:28px;font-weight:700;color:#2c3e50}
+.kpi-card .unit{font-size:14px;font-weight:400;color:#888;margin-left:2px}
+.kpi-card .sub{font-size:12px;color:#999;margin-top:6px}
+.kpi-card .bar{position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0}
+.kpi-card .bar.blue{background:#4e79f6}
+.kpi-card .bar.green{background:#22c55e}
+.kpi-card .bar.orange{background:#f59e0b}
+.kpi-card .bar.purple{background:#8b5cf6}
+.kpi-card .bar.red{background:#ef4444}
+.kpi-card .bar.teal{background:#14b8a6}
+.dashboard{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 32px 24px}
+.dashboard .full{grid-column:1/-1}
+.panel{background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden}
+.panel .panel-header{padding:16px 20px;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:600;color:#333}
+.panel .panel-body{padding:0}
+.panel .chart{width:100%;height:360px}
+.panel .chart.tall{height:440px}
+.table-wrap{overflow-x:auto;padding:0 20px 20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+table th{background:#f8f9fa;padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:2px solid #e8e8e8;white-space:nowrap}
+table td{padding:10px 12px;border-bottom:1px solid #f0f0f0;color:#444}
+table tr:hover td{background:#fafbfc}
+table .num{text-align:right;font-variant-numeric:tabular-nums}
+table .highlight{color:#4e79f6;font-weight:600}
+.rank-badge{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:4px;font-size:12px;font-weight:600;color:#fff}
+.rank-badge.r1{background:#f59e0b}
+.rank-badge.r2{background:#94a3b8}
+.rank-badge.r3{background:#cd7b2e}
+.rank-badge.rn{background:#e2e8f0;color:#888}
+@media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}.dashboard{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>五月小组业绩分析报表</h1>
+    <div class="subtitle">数据更新时间：2026-08-28 ｜ 共 223 个产品</div>
+  </div>
+</div>
+
+<div class="kpi-row" id="kpi-cards"></div>
+
+<div class="dashboard">
+  <div class="panel">
+    <div class="panel-header">运营人员业绩对比</div>
+    <div class="panel-body"><div class="chart" id="chart-operator"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">产品分组业绩分布</div>
+    <div class="panel-body"><div class="chart" id="chart-category"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">店铺销售额排名</div>
+    <div class="panel-body"><div class="chart tall" id="chart-store"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">运营人员 - 毛利率 & 广告ACOS</div>
+    <div class="panel-body"><div class="chart" id="chart-margin"></div></div>
+  </div>
+  <div class="panel full">
+    <div class="panel-header">销售额 TOP 15 产品</div>
+    <div class="table-wrap" id="top-products-table"></div>
+  </div>
+  <div class="panel full">
+    <div class="panel-header">运营人员详细指标</div>
+    <div class="table-wrap" id="operator-table"></div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  "operators": [
+    {
+      "name": "高杰",
+      "销售额": 1789720,
+      "毛利润": 337724,
+      "销量": 17134,
+      "广告花费": -197169,
+      "广告销售额": 707885,
+      "退款金额": -65333,
+      "产品数": 71,
+      "店铺数": 10,
+      "毛利率": "18.9",
+      "退款率": "-3.7"
+    },
+    {
+      "name": "郑春燕",
+      "销售额": 796249,
+      "毛利润": 113844,
+      "销量": 5933,
+      "广告花费": -96658,
+      "广告销售额": 401365,
+      "退款金额": -75274,
+      "产品数": 82,
+      "店铺数": 11,
+      "毛利率": "14.3",
+      "退款率": "-9.5"
+    },
+    {
+      "name": "张志鹏",
+      "销售额": 367512,
+      "毛利润": 54001,
+      "销量": 2399,
+      "广告花费": -46732,
+      "广告销售额": 164972,
+      "退款金额": -19941,
+      "产品数": 43,
+      "店铺数": 18,
+      "毛利率": "14.7",
+      "退款率": "-5.4"
+    },
+    {
+      "name": "李燕",
+      "销售额": 24353,
+      "毛利润": 11654,
+      "销量": 396,
+      "广告花费": -1412,
+      "广告销售额": 8651,
+      "退款金额": -870,
+      "产品数": 27,
+      "店铺数": 4,
+      "毛利率": "47.9",
+      "退款率": "-3.6"
+    }
+  ],
+  "categories": [
+    {
+      "name": "鼠标垫",
+      "销售额": 207415,
+      "毛利润": 49482,
+      "销量": 5300,
+      "广告花费": -10994,
+      "广告销售额": 37810,
+      "产品数": 13,
+      "毛利率": "23.9"
+    },
+    {
+      "name": "鼠标",
+      "销售额": 964707,
+      "毛利润": 154492,
+      "销量": 10272,
+      "广告花费": -118707,
+      "广告销售额": 428969,
+      "产品数": 42,
+      "毛利率": "16.0"
+    },
+    {
+      "name": "键鼠套装",
+      "销售额": 828757,
+      "毛利润": 157095,
+      "销量": 3618,
+      "广告花费": -89996,
+      "广告销售额": 431513,
+      "产品数": 49,
+      "毛利率": "19.0"
+    },
+    {
+      "name": "幕布",
+      "销售额": 284894,
+      "毛利润": 51939,
+      "销量": 1495,
+      "广告花费": -34306,
+      "广告销售额": 132408,
+      "产品数": 18,
+      "毛利率": "18.2"
+    },
+    {
+      "name": "键盘",
+      "销售额": 252677,
+      "毛利润": 47739,
+      "销量": 1624,
+      "广告花费": -22035,
+      "广告销售额": 87512,
+      "产品数": 29,
+      "毛利率": "18.9"
+    },
+    {
+      "name": "数字键盘",
+      "销售额": 86463,
+      "毛利润": 29146,
+      "销量": 806,
+      "广告花费": -1590,
+      "广告销售额": 14458,
+      "产品数": 5,
+      "毛利率": "33.7"
+    },
+    {
+      "name": "蜡烛灯",
+      "销售额": 156790,
+      "毛利润": 21557,
+      "销量": 1270,
+      "广告花费": -18185,
+      "广告销售额": 60070,
+      "产品数": 22,
+      "毛利率": "13.7"
+    },
+    {
+      "name": "磁力方块",
+      "销售额": 129011,
+      "毛利润": 7936,
+      "销量": 571,
+      "广告花费": -38082,
+      "广告销售额": 71236,
+      "产品数": 4,
+      "毛利率": "6.2"
+    },
+    {
+      "name": "手写板",
+      "销售额": 64339,
+      "毛利润": -1568,
+      "销量": 888,
+      "广告花费": -7477,
+      "广告销售额": 17474,
+      "产品数": 31,
+      "毛利率": "-2.4"
+    },
+    {
+      "name": "Switch2",
+      "销售额": 428,
+      "毛利润": -459,
+      "销量": 5,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 1,
+      "毛利率": "-107.3"
+    },
+    {
+      "name": "止吠器",
+      "销售额": 1614,
+      "毛利润": -160,
+      "销量": 9,
+      "广告花费": -423,
+      "广告销售额": 1060,
+      "产品数": 4,
+      "毛利率": "-9.9"
+    },
+    {
+      "name": "翻译耳机",
+      "销售额": 740,
+      "毛利润": 24,
+      "销量": 4,
+      "广告花费": -176,
+      "广告销售额": 362,
+      "产品数": 5,
+      "毛利率": "3.3"
+    }
+  ],
+  "stores": [
+    {
+      "name": "春秋欧洲_UK",
+      "销售额": 1092446,
+      "毛利润": 206627,
+      "销量": 12350,
+      "广告花费": -90326,
+      "广告销售额": 358274,
+      "产品数": 27,
+      "毛利率": "18.9"
+    },
+    {
+      "name": "春秋欧洲_DE",
+      "销售额": 660804,
+      "毛利润": 93633,
+      "销量": 5089,
+      "广告花费": -80993,
+      "广告销售额": 340017,
+      "产品数": 53,
+      "毛利率": "14.2"
+    },
+    {
+      "name": "致和欧洲_DE",
+      "销售额": 185888,
+      "毛利润": 35659,
+      "销量": 1629,
+      "广告花费": -20175,
+      "广告销售额": 93464,
+      "产品数": 8,
+      "毛利率": "19.2"
+    },
+    {
+      "name": "致和欧洲_UK",
+      "销售额": 190915,
+      "毛利润": 41394,
+      "销量": 1384,
+      "广告花费": -25918,
+      "广告销售额": 98427,
+      "产品数": 8,
+      "毛利率": "21.7"
+    },
+    {
+      "name": "火烈鸟欧洲_UK",
+      "销售额": 249032,
+      "毛利润": 50566,
+      "销量": 1113,
+      "广告花费": -36800,
+      "广告销售额": 120264,
+      "产品数": 3,
+      "毛利率": "20.3"
+    },
+    {
+      "name": "致新欧洲_UK",
+      "销售额": 277138,
+      "毛利润": 37273,
+      "销量": 1739,
+      "广告花费": -49205,
+      "广告销售额": 133908,
+      "产品数": 14,
+      "毛利率": "13.4"
+    },
+    {
+      "name": "火烈鸟欧洲_DE",
+      "销售额": 54999,
+      "毛利润": 4970,
+      "销量": 336,
+      "广告花费": -10448,
+      "广告销售额": 32361,
+      "产品数": 9,
+      "毛利率": "9.0"
+    },
+    {
+      "name": "春秋欧洲_ES",
+      "销售额": 33565,
+      "毛利润": 6190,
+      "销量": 267,
+      "广告花费": -4194,
+      "广告销售额": 16258,
+      "产品数": 9,
+      "毛利率": "18.4"
+    },
+    {
+      "name": "致新欧洲_DE",
+      "销售额": 72264,
+      "毛利润": 9648,
+      "销量": 462,
+      "广告花费": -8987,
+      "广告销售额": 32096,
+      "产品数": 17,
+      "毛利率": "13.4"
+    },
+    {
+      "name": "春秋欧洲_FR",
+      "销售额": 26567,
+      "毛利润": 4225,
+      "销量": 212,
+      "广告花费": -2385,
+      "广告销售额": 10646,
+      "产品数": 10,
+      "毛利率": "15.9"
+    },
+    {
+      "name": "火烈鸟欧洲_FR",
+      "销售额": 30939,
+      "毛利润": 4744,
+      "销量": 171,
+      "广告花费": -2063,
+      "广告销售额": 11071,
+      "产品数": 3,
+      "毛利率": "15.3"
+    },
+    {
+      "name": "致新欧洲_FR",
+      "销售额": 15325,
+      "毛利润": 2442,
+      "销量": 210,
+      "广告花费": -2240,
+      "广告销售额": 6313,
+      "产品数": 6,
+      "毛利率": "15.9"
+    },
+    {
+      "name": "致新欧洲_ES",
+      "销售额": 19172,
+      "毛利润": 4278,
+      "销量": 228,
+      "广告花费": -1043,
+      "广告销售额": 4132,
+      "产品数": 3,
+      "毛利率": "22.3"
+    },
+    {
+      "name": "火烈鸟欧洲_ES",
+      "销售额": 25154,
+      "毛利润": 1875,
+      "销量": 141,
+      "广告花费": -4244,
+      "广告销售额": 13389,
+      "产品数": 1,
+      "毛利率": "7.5"
+    },
+    {
+      "name": "春秋欧洲_PL",
+      "销售额": 16817,
+      "毛利润": 8752,
+      "销量": 349,
+      "广告花费": -1142,
+      "广告销售额": 6528,
+      "产品数": 15,
+      "毛利率": "52.0"
+    },
+    {
+      "name": "春秋欧洲_IT",
+      "销售额": 11916,
+      "毛利润": 951,
+      "销量": 87,
+      "广告花费": -1373,
+      "广告销售额": 3398,
+      "产品数": 8,
+      "毛利率": "8.0"
+    },
+    {
+      "name": "致新欧洲_PL",
+      "销售额": 7277,
+      "毛利润": 2669,
+      "销量": 46,
+      "广告花费": -270,
+      "广告销售额": 2124,
+      "产品数": 10,
+      "毛利率": "36.7"
+    },
+    {
+      "name": "致新欧洲_IT",
+      "销售额": 1868,
+      "毛利润": -193,
+      "销量": 20,
+      "广告花费": -72,
+      "广告销售额": 0,
+      "产品数": 3,
+      "毛利率": "-10.3"
+    },
+    {
+      "name": "火烈鸟欧洲_IT",
+      "销售额": 2168,
+      "毛利润": 141,
+      "销量": 11,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 3,
+      "毛利率": "6.5"
+    },
+    {
+      "name": "火烈鸟欧洲_SE",
+      "销售额": 1467,
+      "毛利润": 731,
+      "销量": 8,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 2,
+      "毛利率": "49.8"
+    },
+    {
+      "name": "火烈鸟欧洲_NL",
+      "销售额": 1112,
+      "毛利润": 481,
+      "销量": 5,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 2,
+      "毛利率": "43.3"
+    },
+    {
+      "name": "火烈鸟欧洲_BE",
+      "销售额": 540,
+      "毛利润": 218,
+      "销量": 3,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 2,
+      "毛利率": "40.3"
+    },
+    {
+      "name": "致和欧洲_PL",
+      "销售额": 259,
+      "毛利润": 235,
+      "销量": 1,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 1,
+      "毛利率": "90.7"
+    },
+    {
+      "name": "火烈鸟北美_US",
+      "销售额": 203,
+      "毛利润": -23,
+      "销量": 1,
+      "广告花费": -94,
+      "广告销售额": 203,
+      "产品数": 3,
+      "毛利率": "-11.5"
+    },
+    {
+      "name": "致和欧洲_IT",
+      "销售额": 0,
+      "毛利润": -2,
+      "销量": 0,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 1,
+      "毛利率": 0
+    },
+    {
+      "name": "致和欧洲_FR",
+      "销售额": 0,
+      "毛利润": -260,
+      "销量": 0,
+      "广告花费": 0,
+      "广告销售额": 0,
+      "产品数": 2,
+      "毛利率": 0
+    }
+  ],
+  "topProducts": [
+    {
+      "name": "cimetech Wireless Keyboard and Mouse, 2....",
+      "sales": 230939.53,
+      "profit": 50898.78,
+      "volume": 1074,
+      "operator": "高杰",
+      "category": "键鼠套装"
+    },
+    {
+      "name": "cimetech Wireless Mouse, 6 Buttons Mouse...",
+      "sales": 197264.66,
+      "profit": 21536.26,
+      "volume": 3447,
+      "operator": "高杰",
+      "category": "鼠标"
+    },
+    {
+      "name": "HOPFROG 84 Inch Portable Projector Scree...",
+      "sales": 170666.3,
+      "profit": 38690.8,
+      "volume": 832,
+      "operator": "张志鹏",
+      "category": "幕布"
+    },
+    {
+      "name": "cimetech Mouse Mat Office Mouse Pad Mous...",
+      "sales": 162628.78,
+      "profit": 42876.98,
+      "volume": 4312,
+      "operator": "高杰",
+      "category": "鼠标垫"
+    },
+    {
+      "name": "Wireless Keyboard and Mouse Set, 2.4G Co...",
+      "sales": 156049.18,
+      "profit": 25224.66,
+      "volume": 696,
+      "operator": "高杰",
+      "category": "键鼠套装"
+    },
+    {
+      "name": "RaceGT Wireless Mouse USB C & USB A, Rec...",
+      "sales": 143717.58,
+      "profit": 29250.1,
+      "volume": 1053,
+      "operator": "高杰",
+      "category": "鼠标"
+    },
+    {
+      "name": "cimetech Bluetooth Mouse Wireless (Bluet...",
+      "sales": 136656.31,
+      "profit": 21180.83,
+      "volume": 1302,
+      "operator": "郑春燕",
+      "category": "鼠标"
+    },
+    {
+      "name": "cimetech Rechargeable Wireless Mouse, 2....",
+      "sales": 134116.3,
+      "profit": 20762.52,
+      "volume": 1138,
+      "operator": "高杰",
+      "category": "鼠标"
+    },
+    {
+      "name": "RaceGT Maus Kabellos USB-C & USB-A, Mous...",
+      "sales": 134007.18,
+      "profit": 26807.98,
+      "volume": 1240,
+      "operator": "高杰",
+      "category": "鼠标"
+    },
+    {
+      "name": "cimetech Tastatur Maus Set Kabellos, 2.4...",
+      "sales": 108608.36,
+      "profit": 18823.24,
+      "volume": 453,
+      "operator": "郑春燕",
+      "category": "键鼠套装"
+    },
+    {
+      "name": "HOPFROG Toys for Kids Boys 200 PCs Magne...",
+      "sales": 78365.48,
+      "profit": 11898.81,
+      "volume": 281,
+      "operator": "高杰",
+      "category": "磁力方块"
+    },
+    {
+      "name": "EasyTyping Wireless Keyboard and Recharg...",
+      "sales": 72779.87,
+      "profit": 17192.96,
+      "volume": 253,
+      "operator": "高杰",
+      "category": "键鼠套装"
+    },
+    {
+      "name": "Wireless Keyboard and Mouse, PINKCAT 2.4...",
+      "sales": 72191.07,
+      "profit": 14563.78,
+      "volume": 384,
+      "operator": "高杰",
+      "category": "键鼠套装"
+    },
+    {
+      "name": "cimetech Tastatur Maus Set Kabellos, Ult...",
+      "sales": 71284.31,
+      "profit": 12891.2,
+      "volume": 266,
+      "operator": "郑春燕",
+      "category": "键鼠套装"
+    },
+    {
+      "name": "cimetech 2.4G Wireless Keyboard, QWERTY ...",
+      "sales": 69956.65,
+      "profit": 26480.27,
+      "volume": 527,
+      "operator": "高杰",
+      "category": "键盘"
+    }
+  ],
+  "totals": {
+    "销售额": 2977835,
+    "毛利润": 517224,
+    "销量": 25862,
+    "广告花费": -341972,
+    "广告销售额": 1282873,
+    "退款金额": -161419,
+    "曝光量": 24811006,
+    "点击量": 77713,
+    "产品数": 223,
+    "整体毛利率": "17.4",
+    "广告ROAS": 0,
+    "CTR": "0.31"
+  }
+};
+
+// Format helpers
+const fmtMoney = v => v >= 10000 ? (v/10000).toFixed(1)+'万' : v.toFixed(0);
+const fmtNum = v => v >= 10000 ? (v/10000).toFixed(1)+'万' : v.toFixed(0);
+const fmtPct = v => parseFloat(v).toFixed(1)+'%';
+
+// KPI Cards
+const t = DATA.totals;
+const kpis = [
+  {label:'总销售额',value:'¥'+fmtMoney(t.销售额),sub:'整体毛利率 '+t.整体毛利率+'%',bar:'blue'},
+  {label:'毛利润',value:'¥'+fmtMoney(t.毛利润),sub:'毛利率 '+t.整体毛利率+'%',bar:'green'},
+  {label:'总销量',value:fmtNum(t.销量),sub:'共 '+t.产品数+' 个产品',bar:'purple'},
+  {label:'广告花费',value:'¥'+fmtMoney(t.广告花费),sub:'ROAS '+t.广告ROAS,bar:'orange'},
+  {label:'广告销售额',value:'¥'+fmtMoney(t.广告销售额),sub:'CTR '+t.CTR+'%',bar:'teal'},
+  {label:'退款金额',value:'¥'+fmtMoney(t.退款金额),sub:'退款率 '+(t.销售额>0?(t.退款金额/t.销售额*100).toFixed(1):0)+'%',bar:'red'},
+];
+document.getElementById('kpi-cards').innerHTML = kpis.map(k => 
+  `<div class="kpi-card"><div class="bar ${k.bar}"></div><div class="label">${k.label}</div><div class="value">${k.value}</div><div class="sub">${k.sub}</div></div>`
+).join('');
+
+// Common chart config
+function initChart(id) {
+  const c = echarts.init(document.getElementById(id));
+  window.addEventListener('resize', () => c.resize());
+  return c;
+}
+
+// 1. Operator comparison
+(function() {
+  const ops = DATA.operators.sort((a,b) => b.销售额 - a.销售额);
+  const c = initChart('chart-operator');
+  c.setOption({
+    tooltip: {trigger:'axis',axisPointer:{type:'shadow'}},
+    legend: {bottom:0,textStyle:{fontSize:12}},
+    grid: {left:70,right:40,top:20,bottom:40},
+    xAxis: {type:'category',data:ops.map(o=>o.name),axisLabel:{fontSize:12}},
+    yAxis: [{type:'value',name:'销售额',axisLabel:{formatter:v=>v>=10000?(v/10000).toFixed(0)+'万':v}}],
+    series: [
+      {name:'销售额',type:'bar',data:ops.map(o=>o.销售额),itemStyle:{color:'#4e79f6'},barMaxWidth:40},
+      {name:'毛利润',type:'bar',data:ops.map(o=>o.毛利润),itemStyle:{color:'#22c55e'},barMaxWidth:40},
+      {name:'广告花费',type:'bar',data:ops.map(o=>o.广告花费),itemStyle:{color:'#f59e0b'},barMaxWidth:40}
+    ]
+  });
+})();
+
+// 2. Category distribution
+(function() {
+  const cats = DATA.categories.sort((a,b) => b.销售额 - a.销售额);
+  const c = initChart('chart-category');
+  c.setOption({
+    tooltip: {trigger:'axis',axisPointer:{type:'shadow'}},
+    legend: {bottom:0,textStyle:{fontSize:12}},
+    grid: {left:70,right:40,top:20,bottom:40},
+    xAxis: {type:'category',data:cats.map(o=>o.name),axisLabel:{fontSize:11,rotate:30}},
+    yAxis: [{type:'value',axisLabel:{formatter:v=>v>=10000?(v/10000).toFixed(0)+'万':v}}],
+    series: [
+      {name:'销售额',type:'bar',data:cats.map(o=>o.销售额),itemStyle:{color:'#4e79f6'},barMaxWidth:36},
+      {name:'毛利润',type:'bar',data:cats.map(o=>o.毛利润),itemStyle:{color:'#22c55e'},barMaxWidth:36}
+    ]
+  });
+})();
+
+// 3. Store ranking
+(function() {
+  const stores = DATA.stores.sort((a,b) => b.销售额 - a.销售额).slice(0, 15);
+  const c = initChart('chart-store');
+  c.setOption({
+    tooltip: {trigger:'axis',axisPointer:{type:'shadow'}},
+    grid: {left:140,right:40,top:10,bottom:20},
+    xAxis: {type:'value',axisLabel:{formatter:v=>v>=10000?(v/10000).toFixed(0)+'万':v}},
+    yAxis: {type:'category',data:stores.map(s=>s.name).reverse(),axisLabel:{fontSize:11},inverse:true},
+    series: [
+      {name:'销售额',type:'bar',data:stores.map(s=>s.销售额).reverse(),
+       itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[
+         {offset:0,color:'#4e79f6'},{offset:1,color:'#8b5cf6'}
+       ])},barMaxWidth:16,
+       label:{show:true,position:'right',fontSize:10,formatter:p=>fmtMoney(p.value)}}
+    ]
+  });
+})();
+
+// 4. Margin vs ACOS scatter
+(function() {
+  const ops = DATA.operators;
+  const c = initChart('chart-margin');
+  c.setOption({
+    tooltip: {
+      trigger:'item',
+      formatter: p => {
+        const d = ops[p.dataIndex];
+        return `<b>${d.name}</b><br/>毛利率: ${d.毛利率}%<br/>广告ACOS: ${(d.广告销售额>0?d.广告花费/d.广告销售额*100:0).toFixed(1)}%<br/>销售额: ¥${fmtMoney(d.销售额)}`;
+      }
+    },
+    grid: {left:60,right:30,top:50,bottom:50},
+    xAxis: {name:'毛利率(%)',nameLocation:'center',nameGap:30,axisLabel:{formatter:v=>v+'%'}},
+    yAxis: {name:'广告ACOS(%)',nameLocation:'center',nameGap:40,axisLabel:{formatter:v=>v+'%'},inverse:true},
+    series: [{
+      type:'scatter',
+      data: ops.map(o => {
+        const acos = o.广告销售额 > 0 ? o.广告花费 / o.广告销售额 * 100 : 0;
+        return [parseFloat(o.毛利率), parseFloat(acos.toFixed(1)), o.销售额];
+      }),
+      symbolSize: v => Math.max(20, Math.min(60, v[2] / 20000)),
+      itemStyle: {color:'#4e79f6'},
+      label: {show:true,formatter:p=>ops[p.dataIndex].name,position:'top',fontSize:11},
+      emphasis: {itemStyle:{color:'#f59e0b'}}
+    }]
+  });
+})();
+
+// 5. Top products table
+(function() {
+  const rows = DATA.topProducts.map((p,i) => {
+    const rank = i < 3 ? `r${i+1}` : 'rn';
+    const medals = ['🥇','🥈','🥉'];
+    const badge = i < 3 ? `<span class="rank-badge ${rank}">${medals[i]}</span>` : `<span class="rank-badge ${rank}">${i+1}</span>`;
+    return `<tr>
+      <td>${badge}</td>
+      <td>${p.name}</td>
+      <td>${p.category}</td>
+      <td>${p.operator}</td>
+      <td class="num highlight">¥${fmtMoney(p.sales)}</td>
+      <td class="num">¥${fmtMoney(p.profit)}</td>
+      <td class="num">${fmtNum(p.volume)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('top-products-table').innerHTML = `
+    <table>
+      <thead><tr><th>#</th><th>商品名称</th><th>分组</th><th>运营人员</th><th>销售额</th><th>毛利润</th><th>销量</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+})();
+
+// 6. Operator detail table
+(function() {
+  const ops = DATA.operators.sort((a,b) => b.销售额 - a.销售额);
+  const rows = ops.map(o => {
+    const acos = o.广告销售额 > 0 ? (o.广告花费 / o.广告销售额 * 100).toFixed(1) : '--';
+    const roas = o.广告花费 > 0 ? (o.广告销售额 / o.广告花费).toFixed(1) : '--';
+    return `<tr>
+      <td><b>${o.name}</b></td>
+      <td class="num highlight">¥${fmtMoney(o.销售额)}</td>
+      <td class="num">¥${fmtMoney(o.毛利润)}</td>
+      <td class="num">${o.毛利率}%</td>
+      <td class="num">${fmtNum(o.销量)}</td>
+      <td class="num">¥${fmtMoney(o.广告花费)}</td>
+      <td class="num">¥${fmtMoney(o.广告销售额)}</td>
+      <td class="num">${acos}%</td>
+      <td class="num">${roas}</td>
+      <td class="num">${o.产品数}</td>
+      <td class="num">${o.店铺数}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('operator-table').innerHTML = `
+    <table>
+      <thead><tr><th>运营人员</th><th>销售额</th><th>毛利润</th><th>毛利率</th><th>销量</th><th>广告花费</th><th>广告销售额</th><th>ACOS</th><th>ROAS</th><th>产品数</th><th>店铺数</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+})();
+</script>
+</body>
+</html>

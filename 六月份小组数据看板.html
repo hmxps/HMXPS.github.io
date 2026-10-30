@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>六月份销售数据分析看板（优化版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #f4f7fc;
+            padding: 20px;
+            color: #1e293b;
+        }
+        .dashboard {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            background: #ffffff;
+            padding: 18px 28px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(145deg, #0f2b4b, #1a4a7a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .period {
+            font-size: 14px;
+            background: #eef3f9;
+            padding: 6px 18px;
+            border-radius: 40px;
+            color: #1e4a7a;
+            font-weight: 500;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .kpi-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border-left: 5px solid #2563eb;
+            transition: 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        }
+        .kpi-card .label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+        .kpi-card .value {
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: #0f2b4b;
+        }
+        .kpi-card .sub {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .kpi-card.green {
+            border-left-color: #16a34a;
+        }
+        .kpi-card.purple {
+            border-left-color: #7c3aed;
+        }
+        .kpi-card.orange {
+            border-left-color: #f59e0b;
+        }
+        .kpi-card.rose {
+            border-left-color: #e11d48;
+        }
+        .kpi-card.teal {
+            border-left-color: #0d9488;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 22px;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 40px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .tabs button {
+            border: none;
+            background: transparent;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tabs button:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        .tabs button.active {
+            background: #1e4a7a;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(30, 74, 122, 0.2);
+        }
+        .panel {
+            display: none;
+            animation: fadeIn 0.35s ease;
+        }
+        .panel.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .chart-box {
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px 16px 10px 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .chart-box h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+            padding-left: 4px;
+            border-left: 4px solid #2563eb;
+            padding-left: 12px;
+        }
+        .chart-box canvas {
+            max-height: 280px;
+            max-width: 100%;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .table-wrap {
+            background: #fff;
+            border-radius: 14px;
+            padding: 16px 16px 6px 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+        .table-wrap h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-left: 12px;
+            border-left: 4px solid #7c3aed;
+        }
+        .table-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+            align-items: center;
+        }
+        .table-controls button {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .table-controls button.active {
+            background: #1e4a7a;
+            color: #fff;
+            border-color: #1e4a7a;
+        }
+        .table-controls button:hover {
+            background: #f1f5f9;
+        }
+        .table-controls button.active:hover {
+            background: #1a3f66;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-weight: 600;
+            padding: 10px 12px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        tr:hover td {
+            background: #fafcff;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge.red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge.yellow {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+        .badge.blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        @media (max-width: 820px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .tabs {
+                border-radius: 20px;
+                padding: 6px 10px;
+                gap: 4px;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+            .tabs button {
+                padding: 6px 14px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .kpi-card .value {
+                font-size: 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard" id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📊 六月份销售数据看板</h1>
+            <span class="period">📅 2026年6月 · 小组汇总</span>
+        </div>
+
+        <!-- KPI -->
+        <div class="kpi-grid" id="kpiContainer"></div>
+
+        <!-- Tabs -->
+        <div class="tabs" id="tabContainer">
+            <button class="active" data-tab="tab1">📌 总览</button>
+            <button data-tab="tab2">👤 运营人员</button>
+            <button data-tab="tab3">🏪 店铺</button>
+            <button data-tab="tab4">📦 商品种类</button>
+            <button data-tab="tab5">📈 点击率 & 转化</button>
+            <button data-tab="tab6">💰 盈亏分析</button>
+            <button data-tab="tab7">📋 明细数据</button>
+        </div>
+
+        <!-- Panels -->
+        <div id="tab1" class="panel active">
+            <div class="chart-grid">
+                <div class="chart-box"><h3>各品类销售额</h3><canvas id="catSalesChart"></canvas></div>
+                <div class="chart-box"><h3>各品类毛利润</h3><canvas id="catProfitChart"></canvas></div>
+                <div class="chart-box"><h3>各运营人员销售额</h3><canvas id="opSalesChart"></canvas></div>
+                <div class="chart-box"><h3>各运营人员毛利润</h3><canvas id="opProfitChart"></canvas></div>
+                <div class="chart-box full-width"><h3>各店铺销售额 TOP10</h3><canvas id="shopSalesChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="tab2" class="panel">
+            <div class="chart-grid">
+                <div class="chart-box"><h3>运营人员 · 销售额</h3><canvas id="opSalesChart2"></canvas></div>
+                <div class="chart-box"><h3>运营人员 · 毛利润</h3><canvas id="opProfitChart2"></canvas></div>
+                <div class="chart-box"><h3>运营人员 · 销量</h3><canvas id="opUnitsChart"></canvas></div>
+                <div class="chart-box"><h3>运营人员 · 平均毛利率</h3><canvas id="opMarginChart"></canvas></div>
+                <div class="table-wrap full-width">
+                    <h3>📋 运营人员详细汇总</h3>
+                    <div id="opTableContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab3" class="panel">
+            <div class="chart-grid">
+                <div class="chart-box"><h3>店铺 · 销售额 TOP12</h3><canvas id="shopSalesChart2"></canvas></div>
+                <div class="chart-box"><h3>店铺 · 毛利润 TOP12</h3><canvas id="shopProfitChart"></canvas></div>
+                <div class="chart-box"><h3>店铺 · 销量</h3><canvas id="shopUnitsChart"></canvas></div>
+                <div class="chart-box"><h3>店铺 · 平均毛利率</h3><canvas id="shopMarginChart"></canvas></div>
+                <div class="table-wrap full-width">
+                    <h3>📋 店铺详细汇总</h3>
+                    <div id="shopTableContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab4" class="panel">
+            <div class="chart-grid">
+                <div class="chart-box"><h3>商品种类 · 销售额</h3><canvas id="catSalesChart2"></canvas></div>
+                <div class="chart-box"><h3>商品种类 · 毛利润</h3><canvas id="catProfitChart2"></canvas></div>
+                <div class="chart-box"><h3>商品种类 · 销量</h3><canvas id="catUnitsChart"></canvas></div>
+                <div class="chart-box"><h3>商品种类 · 平均毛利率</h3><canvas id="catMarginChart"></canvas></div>
+                <div class="table-wrap full-width">
+                    <h3>📋 商品种类详细汇总</h3>
+                    <div id="catTableContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab5" class="panel">
+            <div class="chart-grid">
+                <div class="chart-box"><h3>各商品 · 点击率 vs 转化率（广告订单/点击）</h3><canvas id="ctrConvChart"></canvas></div>
+                <div class="chart-box"><h3>各品类 · 平均点击率</h3><canvas id="catCtrChart"></canvas></div>
+                <div class="chart-box"><h3>各品类 · 平均转化率（广告订单/点击）</h3><canvas id="catConvChart"></canvas></div>
+                <div class="chart-box"><h3>各品类 · 广告花费 vs 广告销售额</h3><canvas id="adSpendChart"></canvas></div>
+                <div class="table-wrap full-width">
+                    <h3>📋 点击率 & 转化率 TOP20</h3>
+                    <div id="ctrTableContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab6" class="panel">
+            <div class="chart-grid">
+                <div class="chart-box"><h3>盈亏分布（按商品）</h3><canvas id="profitPieChart"></canvas></div>
+                <div class="chart-box"><h3>各品类 · 盈利/亏损商品数</h3><canvas id="catProfitCountChart"></canvas></div>
+                <div class="chart-box"><h3>盈利商品 TOP10（按毛利润）</h3><canvas id="topProfitChart"></canvas></div>
+                <div class="chart-box"><h3>亏损商品 TOP10（按毛利润）</h3><canvas id="topLossChart"></canvas></div>
+                <div class="table-wrap full-width">
+                    <h3>📋 盈亏商品明细（按毛利润排序）</h3>
+                    <div id="profitTableContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab7" class="panel">
+            <div class="table-wrap">
+                <h3>📋 全部商品明细（关键字段）</h3>
+                <div id="detailTableContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==============================
+        // 1. 数据定义（与之前保持一致）
+        // ==============================
+        const rawData = [
+            ["cimetech Mouse Mat Office Mouse Pad Mousepad 23 x 18 cm Ultra Thin Improves Speed and Accuracy, Superfine Fiber, Non-Slip Rubber Base, Textured, Wear-Resistant, Washable, Black", "春秋欧洲_UK", "鼠标垫", "高杰", 93298.56, -2213.69, 0.0415, 0.2421, 22591.15, 3014, 208, 215178, 766, 0.0036, -2775.41, 7971.26, -0.3482, -3.62, -0.0297, 0.0854],
+            ["cimetech Wireless Mouse, 6 Buttons Mouse Silent Efficient Design, Suitable for Hand Size & Comfortable Grip, Office Mouse for Laptop PC Computer Tablets Windows Linux, 3 Adjustment Levels, Silver", "春秋欧洲_UK", "鼠标", "高杰", 138906.67, -5092.34, 0.0337, 0.0627, 8709.12, 2910, 278, 596142, 1349, 0.0023, -4838.83, 16083.96, -0.3008, -3.59, -0.0348, 0.1158],
+            ["cimetech Bluetooth Mouse Wireless (Bluetooth 5.1 + USB 2.4 GHz) LED Dual Mode Rechargeable Optical Office Wireless Mouse for Laptop MacBook Air Pro, iPad, Computer, Desktop, Mouse", "春秋欧洲_DE", "鼠标", "郑春燕", 146838.51, -5301.55, 0.036, 0.168, 24675.83, 1724, 1069, 1360647, 4788, 0.0035, -25481.44, 95806.21, -0.266, -5.32, -0.1735, 0.6525],
+            ["HOPFROG 84 Inch Portable Projector Screen, Washable & Anti-Crease Milk Silk Fabric, 16:9 4K HD Dual-Sided Foldable Movie Screen for Outdoor Camping & Home Theater, Easy Setup with Hooks, 160° View", "火烈鸟欧洲_UK", "幕布", "张志鹏", 340989.91, -33919.37, 0.1053, 0.342, 116602.88, 1719, 779, 419158, 8248, 0.0197, -25108.92, 144062.43, -0.1743, -3.04, -0.0736, 0.4225],
+            ["cimetech Wireless Keyboard and Mouse, 2.4G Full-Sized Keyboard and Mouse Set with Sleek Ergonomic Silent Design & Stable Connection for Windows PC Laptop Computer (UK Layout, Black)", "春秋欧洲_UK", "键鼠套装", "高杰", 237142.43, -11398.56, 0.0495, 0.2126, 50405.03, 1354, 608, 474480, 2602, 0.0055, -26767.39, 123745.95, -0.2163, -10.29, -0.1129, 0.5218],
+            ["RaceGT Maus Kabellos USB-C & USB-A, Mouse Aufladbar 2,4GHz Leise klick Beidhändig 3 Adjustable DPI Level mit 4 Tasten, mit EIN Aus Schalter für Computer Laptop PC MacbookPro/Air Chromebook", "致和欧洲_DE", "鼠标", "高杰", 110490.61, -5373.76, 0.05, 0.2094, 23138.17, 1199, 727, 895674, 2974, 0.0033, -13872.59, 70025.78, -0.1981, -4.66, -0.1256, 0.6338],
+            ["Tragbarer Videoprojektor-Leinwand mit Stativ-Ständer, 254,4 cm (100 Zoll), für Heimkino, Büro, Meeting-Projektion und Outdoor-Werbung VPS100", "火烈鸟欧洲_DE", "幕布", "张志鹏", 194145.65, -25343.48, 0.1335, 0.2811, 54565.7, 1101, 565, 291866, 6220, 0.0213, -17266.38, 93604.89, -0.1845, -2.78, -0.0889, 0.4821],
+            ["RaceGT Wireless Mouse USB C & USB A, Rechargeable Laptop Mouse, Portable Lightweight Optical Design, Quiet Click, Long Battery Life, Adjustable DPI for PC, Desktop, Chromebook, Mac, Notebook - Silver", "致和欧洲_UK", "鼠标", "高杰", 108689.19, -4595.95, 0.0429, 0.171, 18591.26, 956, 729, 529755, 2674, 0.005, -23208.92, 84396.04, -0.275, -8.68, -0.2135, 0.7765],
+            ["cimetech Mauspad 260 x 210 x 3 mm Gaming Mousepad mit Wasserdicht und Rutschfester Gummi für PC-Büro, Arbeit, Gaming, Studium, Laptop, Computer, Zuhause-Schwarz", "春秋欧洲_DE", "鼠标垫", "郑春燕", 38653.42, -767.08, 0.0223, 0.1992, 7700.66, 942, 589, 887693, 2429, 0.0027, -7324.3, 27299.3, -0.2683, -3.02, -0.1895, 0.7063],
+            ["cimetech Rechargeable Wireless Mouse, 2.4G & Bluetooth Mouse for Laptop Slim Silent Mice Ergonomic Cordless Design with USB & 1600 DPI Compatible with Macbook iPad PC Computer Notebook Laptop", "春秋欧洲_UK", "鼠标", "高杰", 88548.47, -3347.03, 0.0385, 0.064, 5670.19, 908, 879, 740430, 3814, 0.0052, -26370.27, 86812.7, -0.3038, -6.91, -0.2978, 0.9804],
+            ["Wireless Keyboard and Mouse Set, 2.4G Compact Slim QWERTY UK Layout USB Keyboard and Cordless Silent Mouse Combo with Numeric Keypad Ergonomic Energy Saving for Windows PC/Laptop/Computer/Apple Mac", "春秋欧洲_UK", "键鼠套装", "高杰", 117071.8, -8750.09, 0.075, 0.123, 14396.16, 627, 499, 254616, 2517, 0.0099, -19907.3, 98379.91, -0.2024, -7.91, -0.17, 0.8403],
+            ["cimetech Tastatur Maus Set Kabellos, 2.4G Wiederaufladbare Kabellose Tastatur Ergonomisch Funktastatur QWERTZ Layout (Deutsch), Ultra Thin Fullsize für Computer/Desktop/PC/Laptop/Windows", "春秋欧洲_DE", "键鼠套装", "郑春燕", 118134.32, -13718.56, 0.1164, 0.1615, 19079.7, 593, 410, 619474, 3424, 0.0055, -12195.11, 82664.21, -0.1475, -3.56, -0.1032, 0.6997],
+            ["RaceGT Maus Kabellos Aufladbar, 2,4GHz LED Funkmaus USB-A & Typ-C Empfänger Silent 3 Verstellbare DPI Level mit EIN Aus Schalter, mit Ladekabel für Computer Laptop PC MacbookPro/Air Chromebook", "致和欧洲_DE", "鼠标", "高杰", 46790.99, -2558.31, 0.0559, 0.2135, 9987.61, 465, 304, 368225, 1303, 0.0035, -5845.34, 29570.19, -0.1977, -4.49, -0.1249, 0.632],
+            ["cimetech Bluetooth Maus 5.1+2.4G Dual Aufladbar Leise Slim für Mac/PC/iPad", "春秋欧洲_DE", "鼠标", "郑春燕", 40114.52, -986.26, 0.0237, 0.0672, 2696.51, 464, 417, 625181, 2032, 0.0033, -12354.74, 38627.64, -0.3198, -6.08, -0.308, 0.9629],
+            ["Wireless Keyboard and Mouse, PINKCAT 2.4G QWERTY UK Layout Keyboard and Cordless Silent Mouse Combo with Numeric Keypad Ergonomic Energy Saving for Windows, Computer, Desktop, PC, Laptop (Black)", "致新欧洲_UK", "键鼠套装", "高杰", 67961.26, -6190.09, 0.093, 0.173, 11760.3, 441, 245, 322534, 2078, 0.0064, -8846.85, 38123.78, -0.2321, -4.26, -0.1302, 0.561],
+            ["cimetech Tragbarer Mini-Ziffernblock 2,4 GHz, 18 Tasten, USB-Empfänger", "春秋欧洲_DE", "数字键盘", "郑春燕", 36314.6, -2393.87, 0.0642, 0.2871, 10426.5, 436, 158, 110616, 726, 0.0066, -1447.28, 13452.87, -0.1076, -1.99, -0.0399, 0.3705],
+            ["cimetech Wireless Numeric Keypad, 2.4G Portable Ergonomic Mini Numpad with USB Receiver 18Keys Office Calculating Number Pads for Laptop, Notebook, Desktop, Computer, PC (Black)", "春秋欧洲_UK", "数字键盘", "高杰", 33620.09, -1818.02, 0.0507, 0.4076, 13703.86, 375, 0, 83, 0, 0, 0, 0, "--", 0, 0],
+            ["EasyTyping Wireless Keyboard and Rechargeable Mouse - Type with Ease & Double Your Efficiency - High-end Laptop Keyboard Technology -Compact Keyboard Noiseless Mouse, say goodbye to typing troubles", "致新欧洲_UK", "键鼠套装", "高杰", 85543.96, -3269.37, 0.0376, 0.2068, 17691.81, 372, 255, 695575, 1819, 0.0026, -15579.64, 70171.17, -0.222, -8.56, -0.1821, 0.8203],
+            ["PINKCAT Mini Tastatur Maus Set Kabellos 2.4 GHz Kabellose Tastatur und Maus Ergonomisch Slim Tastatur Deutsch QWERTZ Layout 12 FN-Tasten Leise Funktastatur mit Maus für PC/Laptop/Smart TV", "致新欧洲_DE", "键鼠套装", "郑春燕", 55442.08, -8291.07, 0.1466, 0.1356, 7519.48, 341, 217, 260904, 2049, 0.0079, -8327.41, 38645.42, -0.2155, -4.06, -0.1502, 0.697],
+            ["cimetech Flammenlose Kegelkerzen, batteriebetriebenes LED-Kerzenlicht mit ferngesteuerter Zeitschaltuhr und realistische 3D Wick für Abendessen, Kirchen, Tische, Hochzeiten Geburtstagsfeier(4er-Pack)", "春秋欧洲_DE", "蜡烛灯", "郑春燕", 30899.38, -1701.4, 0.0472, 0.1475, 4558.56, 339, 94, 396498, 866, 0.0022, -3183.85, 10280.2, -0.3097, -3.68, -0.103, 0.3327],
+            ["cimetech 2.4G Wireless Keyboard, QWERTY UK Full-Size Layout, USB Computer Keyboard with Numeric Keypad & Ergonomic Keys for Desktop/PC/Laptop/Surface/Smart TV/Notebook and Windows - Black", "春秋欧洲_UK", "键盘", "高杰", 34335.41, -1867.84, 0.0543, 0.3679, 12630.29, 313, 0, 1538, 4, 0.0026, -12.61, 0, "--", -3.15, -0.0004, 0],
+            ["PINKCAT Stocking Fillers for Kids Grandkids Boys 200pcs Magnetic Cubes - Lava Lawn Set Travel Essentials Party Bag Fillers for Toddlers Ages 3 4 5 6 7 8 9 10 Year Old Halloween, Christmas, Birthday", "致新欧洲_UK", "磁力方块", "高杰", 42013.6, -1295.23, 0.0588, -0.2236, -9394.32, 272, 176, 8704370, 7034, 0.0008, -22871.71, 27078.11, -0.8447, -3.25, -0.5444, 0.6445],
+            ["cimetech Wireless Bluetooth Mouse (BT5.1 + 2.4G), Type-C Rechargeable Silent Mouse, Ultra-Slim Ergonomic Portable Mice for Business Travel & Library, Compatible with MacBook/iPad/Windows PC - Silver", "春秋欧洲_UK", "鼠标", "张志鹏", 29751.89, -1305.77, 0.0451, 0.0704, 2093.15, 266, 268, 292837, 1556, 0.0053, -10586.76, 29284.14, -0.3615, -6.8, -0.3558, 0.9843],
+            ["60 Zoll Beamer Leinwand, Tragbare Waschbare Milchseide Stoff, Faltenfrei 16:9 4K HD Doppelseitig Faltbar, 160° Betrachtungswinkel, Einfache Montage Mit Haken, Ideal für Heimkino und Outdoor Camping", "火烈鸟欧洲_DE", "幕布", "张志鹏", 34121.74, -4545.65, 0.1357, -0.1327, -4528.37, 258, 391, 129503, 5920, 0.0457, -16743.63, 61100.54, -0.274, -2.83, -0.4907, 1.7907],
+            ["PINKCAT Bluetooth Keyboard, Ultra-Slim Wireless Keyboard UK Layout Quiet Portable Design with Built-in Rechargeable Battery for iOS, Mac, iPad, Windows and Android 3.0 and above OS (White)", "致新欧洲_UK", "键盘", "高杰", 17522.25, -1577.57, 0.0898, 0.1276, 2235.24, 256, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Tastatur Maus Set Kabellos, Ultra-Dünne Wiederaufladbare Kabellose Tastatur und Maus Ergonomisch Funktastatur QWERTZ Layout, Ultra SlimThin für Computer/Desktop/PC/Laptop/Windows (Silber)", "春秋欧洲_DE", "键鼠套装", "郑春燕", 55260.17, -3877.56, 0.0694, 0.1939, 10714.22, 245, 186, 441077, 1641, 0.0037, -6698.6, 42884.94, -0.1562, -4.08, -0.1212, 0.7761],
+            ["RaceGT Wireless Mouse Bluetooth & USB C & USB A, Rechargeable Laptop Mouse, Portable Lightweight Optical Design, Quiet Click, Long Battery Life for PC, Desktop, Chromebook, Mac, Notebook - Black", "致和欧洲_UK", "鼠标", "高杰", 23938.38, -1249.1, 0.0517, 0.3158, 7559.71, 232, 53, 38945, 163, 0.0042, -657.66, 4961.62, -0.1325, -4.03, -0.0275, 0.2073],
+            ["Pantalla proyector para Colgar 60 Pulgadas", "火烈鸟欧洲_ES", "幕布", "张志鹏", 36427.1, -3123.84, 0.0889, 0.1672, 6089.83, 225, 127, 99306, 2306, 0.0232, -5437.66, 20460.87, -0.2658, -2.36, -0.1493, 0.5617],
+            ["84 Zoll Beamer Leinwand, Tragbare Waschbare Milchseide Stoff, Faltenfrei 16:9 4K HD Doppelseitig Faltbar, 160° Betrachtungswinkel, Einfache Montage Mit Haken, Ideal für Heimkino und Outdoor Camping", "火烈鸟欧洲_DE", "幕布", "张志鹏", 35713.04, -2934.78, 0.0822, 0.272, 9714.4, 219, 170, 57466, 1671, 0.0291, -4486.41, 28558.7, -0.1571, -2.68, -0.1256, 0.7997],
+            ["HOPFROG Toys for Kids Boys 200 PCs Magnetic Blocks Lava Lawn Set, Stocking Fillers Party Bag Toy for Kid Ages 3 4 5 6 7 8 9 10 Year Old, Fidget Cubes Construction for Halloween, Christmas, Birthday", "火烈鸟欧洲_UK", "磁力方块", "高杰", 44694.14, -631.62, 0.0896, 0.1266, 5659.76, 201, 124, 1534568, 2884, 0.0019, -13418.11, 27542.25, -0.4872, -4.65, -0.3002, 0.6162],
+            ["84 Zoll Beamer Leinwand, Tragbare Waschbare Milchseide Stoff, Faltenfrei 16:9 4K HD Doppelseitig Faltbar, 160° Betrachtungswinkel, Einfache Montage Mit Haken, Ideal für Heimkino und Outdoor Camping", "火烈鸟欧洲_DE", "幕布", "张志鹏", 28402.17, -5152.17, 0.1869, 0.097, 2754.28, 198, 152, 113740, 2325, 0.0204, -6246.51, 23325, -0.2678, -2.69, -0.2199, 0.8212],
+            ["cimetech Kabellose Tastatur Kabellos Deutsches QWERTZ Layout Wireless Keyboard Wiederaufladbare Full Size Ultraslim 2,4G Funktastatur mit Multimedia-Tasten für PC, Computer, Notebook, Laptop, Windows", "春秋欧洲_DE", "键盘", "郑春燕", 39514.21, -2602.17, 0.0663, 0.2192, 8661.36, 196, 106, 315058, 1242, 0.0039, -6063.82, 24431.13, -0.2482, -4.88, -0.1535, 0.6183],
+            ["PINKCAT Wireless Keyboard, Ultra Slim Ergonomic Compact Portable Keyboard with Media Hotkeys USB Receiver for Computer Desktop PC Laptop Surface Smart TV Notebook and Windows", "致新欧洲_UK", "键盘", "高杰", 30700.54, -1778.47, 0.0582, 0.0747, 2292.05, 189, 144, 233373, 898, 0.0038, -6475.32, 23579.73, -0.2746, -7.21, -0.2109, 0.7681],
+            ["cimetech set de 12 décoration de Noël bougiesougies flottantes bougies led sans flamme avec télécommande baguette, 17cm LED bâton bougie led volantes flamme vacillante pour la fête salon", "春秋欧洲_FR", "蜡烛灯", "郑春燕", 21847.13, -594.88, 0.0266, 0.2288, 4997.72, 188, 64, 136564, 499, 0.0037, -1249.61, 9863.51, -0.1267, -2.5, -0.0572, 0.4515],
+            ["cimetech Rechargeable Wireless Mouse, 2.4G & Bluetooth Mouse for Laptop Slim Silent Mice Ergonomic Cordless Design with USB & 1600 DPI Compatible with Macbook iPad PC Computer Notebook Laptop", "春秋欧洲_UK", "鼠标", "高杰", 18424.23, -512.07, 0.0276, 0.3596, 6624.86, 181, 35, 78979, 202, 0.0026, -822.07, 3734.77, -0.2201, -4.07, -0.0446, 0.2027],
+            ["cimetech Tea Candles Lights with Timer Remote Control", "春秋欧洲_UK", "蜡烛灯", "高杰", 17068.65, -953.96, 0.2294, 0.1743, 2974.28, 170, 65, 231953, 517, 0.0022, -3429.46, 6374.59, -0.538, -6.63, -0.2009, 0.3735],
+            ["Tableta Escritura LCD Color,12'' Tablet Escritura Pantalla Colorido Pizarra Magnetica Infantil Cuaderno Digital Gráfica Pizarra Dibujo Niños Adecuada Juguete Educativo Regalo para el Hogar Oficina", "致新欧洲_ES", "手写板", "张志鹏", 11480.75, -979.89, 0.0798, 0.0708, 813.38, 163, 76, 99582, 535, 0.0054, -1438.12, 5349.22, -0.2688, -2.69, -0.1253, 0.4659],
+            ["Spielzeug ab 2 3 4 5 6 7 8 Jahre,PINKCAT Flugzeug Beschäftigung Autofahrt Kinder Restaurant LCD Schreibtafel 8,5 Zoll Puzzle Malbrett Wegwischen Geschenke Mädchen Junge Reisespiele Unterwegs", "致新欧洲_DE", "手写板", "张志鹏", 8573.37, -97.67, 0.0123, 0.0915, 784.48, 162, 47, 88164, 373, 0.0042, -1334.7, 2601.86, -0.513, -3.58, -0.1557, 0.3035],
+            ["PINKCAT USB C Wireless Mouse, Rechargeable Dual-Mode Mouse(Type-c and Bluetooth), Silent Bluetooth Mice for MacBook Air/Pro, Slim Portable Travel Mice for iPad Mac Laptop PC Computer", "致新欧洲_UK", "鼠标", "高杰", 17029.28, -1182.16, 0.0724, 0.1966, 3347.78, 152, 90, 138850, 364, 0.0026, -3196.31, 10615.5, -0.3011, -8.78, -0.1877, 0.6234],
+            ["120 Pouces Écran de Projection Portable, Tissu Soie de Lave Lavable Antirides, 16:9 4K HD Double Face Pliable pour Camping Extérieur et Cinéma Maison, Installation Facile avec Crochets", "火烈鸟欧洲_FR", "幕布", "张志鹏", 26694.41, -1538.98, 0.0604, 0.1928, 5146.02, 149, 65, 67340, 843, 0.0125, -1761.8, 10792.62, -0.1632, -2.09, -0.066, 0.4043],
+            ["Regalo Niña 2 3 4 5 6 7 8 Años,PINKCAT 2 Pack Tableta Gráfica 8,5 Pulgadas Juegos de Viaje Juguetes Niños Pizarra Magica Viaje Tableta de Escritura Digital Electrónica Borrable Tablet para Dibujar", "致新欧洲_ES", "手写板", "张志鹏", 7790.68, -151.16, 0.0204, 0.2337, 1820.95, 147, 0, 2537, 11, 0.0043, -12.11, 0, "--", -1.1, -0.0016, 0],
+            ["cimetech Wireless Rechargeable Keyboard, 2.4G/Bluetooth Connection, Ultra Slim Silent Keyboards for Laptop Mac/Computer Desktop PC Surface/Smart TV/Notebook and Windows 10/8/7 - BK", "春秋欧洲_UK", "键盘", "高杰", 18823.96, -3139.46, 0.1618, -0.054, -1015.78, 136, 124, 584574, 1127, 0.0019, -4355.32, 16363.69, -0.2662, -3.86, -0.2314, 0.8693],
+            ["cimetech Velas Flotantes con Varita, 12 Velas Floating Mágicas, Velas LED Alimentada por Pilas, velas LED sin llama parpadeantes luz Cónica Eléctrica Parpadeante para Familiar Decoración", "春秋欧洲_ES", "蜡烛灯", "郑春燕", 14598.14, -2219.1, 0.1328, 0.0454, 662.75, 128, 67, 160526, 1149, 0.0072, -3098.99, 9248.91, -0.3351, -2.7, -0.2123, 0.6336],
+            ["Tablette Dessin Enfant 8,5 Pouces,PINKCAT 2 Pièces Tablette à Dessiner Effaçable Portable Tablette D'écriture LCD Colorée Cadeau Bebe Garcon Fille Jouet Enfants 1 2 3 4 5 6 7 8 Ans", "致新欧洲_FR", "手写板", "张志鹏", 7108.15, -51.71, 0.0079, -0.0289, -205.24, 126, 73, 53637, 478, 0.0089, -1735.25, 4773.68, -0.3635, -3.63, -0.2441, 0.6716],
+            ["PINKCAT Tastatur Maus Set Kabellos, 2.4G USB Maus und Tastatur Kabellos Deutsche Tastatur QWERTZ Layout 12 FN-Tasten für PC, Desktop, Notebook, und Laptop unter Windows", "致新欧洲_DE", "键鼠套装", "郑春燕", 20772.05, -1824.77, 0.0813, 0.2424, 5035.74, 123, 70, 72797, 840, 0.0115, -3840.84, 13031.52, -0.2947, -4.57, -0.1849, 0.6274],
+            ["HOPFROG 100 Pouces Écran de Projection Portable, Tissu Soie de Lave Lavable Antirides, 16:9 4K HD Double Face Pliable pour Camping Extérieur et Cinéma Maison, Installation Facile avec Crochets", "火烈鸟欧洲_FR", "幕布", "张志鹏", 19227.72, -1804.5, 0.0948, 0.1819, 3497.42, 116, 75, 32622, 786, 0.0241, -1656.6, 12714.6, -0.1303, -2.11, -0.0862, 0.6613],
+            ["cimetech Tastatur Kabellos Flache Tasten 2,4 GHz Wireless Keyboard Funktastatur QWERTZ Layout 10m Reichweite Kompatibel mit PC, Desktop, Notebook, Laptop", "春秋欧洲_DE", "键盘", "郑春燕", 18128.8, -2190.61, 0.1165, 0.1532, 2777.67, 103, 62, 199954, 847, 0.0042, -2934.7, 13817.31, -0.2124, -3.46, -0.1619, 0.7622],
+            ["PINKCAT 8.5in LCD Writing Tablet - Colorful Screen Doodle Scribbler Pad Drawing Board Learning Educational Toys - Gift for Kids 3-6 7 8 9 Years Old Girl Boy (8.5in, Black)", "致新欧洲_UK", "手写板", "张志鹏", 4458.38, -83.15, 0.1979, -0.0412, -183.77, 96, 37, 24521, 189, 0.0077, -1002.52, 1828.38, -0.5483, -5.3, -0.2249, 0.4101],
+            ["RaceGT Wireless Keyboard and Mouse Set - Full Size Ultra-Thin USB Silent Keyboard With Soft Touch Scissor Keys, Energy Saving Mouse for Mac Computer Laptop PC - Black", "致和欧洲_UK", "键鼠套装", "高杰", 17941.35, -1147.03, 0.0674, 0.1075, 1928.05, 89, 60, 139289, 447, 0.0032, -2805.86, 12389.91, -0.2265, -6.28, -0.1564, 0.6906],
+            ["Cimetech Bluetooth Mouse Wireless (Bluetooth 5.1 + USB 2,4 GHz) LED Dual Tryb- Naładowane optyczne mysz radia biurowa dla laptopa MacBooka Air Pro, iPad, komputer.", "春秋欧洲_PL", "鼠标", "李燕", 4776.41, -194.48, 0.0435, 0.6638, 3170.4, 69, 45, 127881, 453, 0.0035, -651.61, 3239.25, -0.2012, -1.44, -0.1364, 0.6782],
+            ["PINKCAT Jouet Bebe 1 2 3 4 5 6 Ans Tableau Magique Enfant 12 Pouces Tablette D'écriture LCD Tablette Dessin Graphique Ardoise Magique Effacable Cadeau Fille Game Boy Jeux Garcon,Rouge", "致新欧洲_FR", "手写板", "张志鹏", 4839.36, -465.37, 0.0938, -0.0126, -60.92, 64, 44, 105481, 380, 0.0036, -1389.6, 3495.19, -0.3976, -3.66, -0.2871, 0.7222],
+            ["Cimetech Wireless Mouse, Slim Silent Cordless with USB-C Receiver for Laptop, MacBook & Type-C Devices", "春秋欧洲_UK", "鼠标", "高杰", 6396.49, -388.65, 0.0635, 0.3765, 2408.53, 63, 0, 10646, 19, 0.0018, -45.41, 117.21, -0.3874, -2.39, -0.0071, 0.0183],
+            ["cimetech Kabellose Tastatur, Ultraslim Deutsches QWERTZ Layout wiederaufladbare USB Anschluss 2,4 GHz Kabellos Tastatur mit Multimedia-Tasten, Kompatibel mit PC, Computer, Notebook, Laptop, Windows", "春秋欧洲_DE", "键盘", "郑春燕", 9431.91, -905.05, 0.0984, -0.0443, -417.8, 61, 73, 664690, 1309, 0.002, -2298.06, 9107.3, -0.2523, -1.76, -0.2436, 0.9656],
+            ["cimetech Maus Kabellos, 2.4GHz Leise Funkmaus Ergonomisch mit USB Nano Empfänger, 800/1200/1600 DPI, Optische Mouse für Laptop/Windows/Mabook/Linux", "春秋欧洲_DE", "鼠标", "郑春燕", 3407.61, -339.75, 0.1017, 0.0619, 210.98, 59, 23, 103219, 134, 0.0013, -379.58, 1678.26, -0.2262, -2.83, -0.1114, 0.4925],
+            ["cimetech Bluetooth Tastatur Maus Set Kabellos für MacBook Air/MacBook Pro/iMac/iMac Pro/Mac, Bluetooth Funktastatur QWERTZ mit Maus Wiederaufladbar, Multi-Gerät, Ergonomisch, Leises Tippen, DE Layout", "春秋欧洲_DE", "键鼠套装", "郑春燕", 13643.32, -3131.37, 0.2264, 0.1441, 1966.27, 53, 24, 95573, 346, 0.0036, -1566.07, 6900, -0.227, -4.53, -0.1148, 0.5057],
+            ["[2 Pack] RaceGT 8.5 Inch LCD Writing Tablet for Kids, Colorful Screen Drawing Pad and Doodle Board, Holiday Travel Essentials Toys Birthday Easter Gift for 3 4 5 6 7 8 Year Old Boys Girls(Pink & Blue)", "致和欧洲_UK", "手写板", "张志鹏", 2281.35, 0, 0.0222, -0.0753, -171.74, 45, 32, 18268, 85, 0.0047, -330.54, 1632.97, -0.2024, -3.89, -0.1449, 0.7158],
+            ["Reisespiele ab 3 4 5 6 7 8 Jahre,PINKCAT Kinderspielzeug Maltafel Zaubertafel 12 Zoll Mädchen Geschenke 1 2 3 4 5 6 7 Jahre Jungen Zeichentablett Mal Tablet Kinder LCD Schreibtafel", "致新欧洲_DE", "手写板", "张志鹏", 3511.41, -143.4, 0.0444, -0.1691, -593.64, 45, 19, 194001, 240, 0.0012, -896.82, 1474.69, -0.6081, -3.74, -0.2554, 0.42],
+            ["HOPFROG 60 Pulgadas Pantalla Proyector Portátil, Tela de Seda de Leche Lavable y Antiarrugas, 16:9 4K HD Doble Cara Plegable para Camping Exterior y Cine en Casa, Fácil Instalación con Ganchos", "火烈鸟欧洲_ES", "幕布", "张志鹏", 5727.87, -769.57, 0.1395, 0.031, 177.42, 43, 35, 23281, 645, 0.0277, -1376.86, 5195.57, -0.265, -2.13, -0.2404, 0.9071],
+            ["cimetech Bluetooth Tastatur Kabellos, Wiederaufladbare Multi-Device Wireless Keyboard mit Einfacher bis zu 3 Geräte, Ultraslim, Deutsches Layout (QWERTZ), Leise Tasten Kompatibel für Mac, Windows, iOS", "春秋欧洲_DE", "键盘", "郑春燕", 9869.8, -932.45, 0.0952, 0.1753, 1730.54, 42, 15, 87524, 313, 0.0036, -1076.86, 4108.39, -0.2621, -3.44, -0.1091, 0.4163],
+            ["Mysz bezprzewodowa cimetech, mysz typu C do laptopa USB C, smukła, cicha mysz bezprzewodowa z kompatybilnym odbiornikiem typu C", "春秋欧洲_PL", "鼠标", "李燕", 1819.86, -229.42, 0.1707, 0.4894, 890.69, 41, 9, 29194, 79, 0.0027, -103.66, 441.4, -0.2348, -1.31, -0.057, 0.2425],
+            ["HOPFROG 84 Pouces Écran de Projection Portable, Tissu Soie de Lave Lavable Antirides, 16:9 4K HD Double Face Pliable pour Camping Extérieur et Cinéma Maison, Installation Facile avec Crochets", "火烈鸟欧洲_FR", "幕布", "张志鹏", 5961.72, -155.2, 0.025, 0.0873, 520.2, 40, 22, 16465, 417, 0.0253, -1061.88, 3381.91, -0.314, -2.55, -0.1781, 0.5673],
+            ["HOPFROG 84 Pulgadas Pantalla Proyector Portátil, Tela de Seda de Leche Lavable y Antiarrugas, 16:9 4K HD Doble Cara Plegable para Camping Exterior y Cine en Casa, Fácil Instalación con Ganchos", "火烈鸟欧洲_ES", "幕布", "张志鹏", 5624.15, -711.8, 0.1282, 0.0673, 378.68, 39, 21, 40088, 707, 0.0176, -1274.22, 3059.16, -0.4165, -1.8, -0.2266, 0.5439],
+            ["cimetech Wireless Mouse, 6 Buttons Mouse Silent Efficient Design, Suitable for Hand Size & Comfortable Grip, Office Mouse for Laptop PC Computer Tablets Windows Linux, 3 Adjustment Levels,Gray", "春秋欧洲_UK", "鼠标", "高杰", 2607.84, -191.08, 0.0769, -0.1371, -357.6, 39, 24, 84286, 164, 0.0019, -561.98, 1549.1, -0.3628, -3.43, -0.2155, 0.594],
+            ["RaceGT Tastatur Maus Set Kabellos 2.4G Ladbar Ergo Fullsize Leise QWERTZ", "致和欧洲_DE", "键鼠套装", "郑春燕", 9005.2, -928.11, 0.1026, 0.0436, 392.18, 39, 27, 120863, 342, 0.0028, -1814.05, 6166.23, -0.2942, -5.3, -0.2014, 0.6847],
+            ["cimetech Tastatur Kabellos Ergonomische Kabellose Tastatur Flache Tasten 2,4 GHz Wireless Keyboard Funktastatur QWERTZ Layout 10m Reichweite Kompatibel mit PC, Desktop, Notebook, Laptop (Slim_Silber)", "春秋欧洲_DE", "键盘", "郑春燕", 4416.46, -1362.58, 0.3125, -0.1012, -447.04, 32, 12, 51636, 190, 0.0037, -346.27, 1914.36, -0.1809, -1.82, -0.0784, 0.4335],
+            ["cimetech 6er LED Stabkerzen mit Timerfunktion, flackernde Flamme LED Echtwachskerzen mit Fernbedienung Stabkerzen led Kerzen (2 x 22.5CM) für Zimmer Deko, Hochzeit und Party", "春秋欧洲_DE", "蜡烛灯", "郑春燕", 4481.06, -1224.53, 0.3125, -0.0652, -291.94, 32, 12, 80439, 348, 0.0043, -1043.71, 2059.24, -0.5068, -3, -0.2329, 0.4595],
+            ["PINKCAT Tastatur Maus Set kabellos farbig, 2.4G Bunte Funktastatur mit Maus Retro Tastatur Cute Wireless Keyboard Silent Mouse für Computer/Desktop/PC/Laptop Geschenke - Blau", "致新欧洲_DE", "键鼠套装", "郑春燕", 6986.26, -704.35, 0.0968, 0.207, 1446.38, 31, 22, 38449, 568, 0.0148, -885.25, 6166.77, -0.1436, -1.56, -0.1267, 0.8827],
+            ["PINKCAT Bluetooth Tastatur Maus Set kabellos, Wiederaufladbare Dualmodus (Bluetooth 5.1+2.4G) Kabellose Tastatur und Maus, Extrem-Dünne Tastatur für Mac, iPad, Apple, Andoid, Windows (Weiß)", "致新欧洲_DE", "键鼠套装", "郑春燕", 5493.56, -195.65, 0.0323, 0.0067, 36.63, 31, 61, 63033, 503, 0.008, -1028.88, 5308.23, -0.1938, -2.05, -0.1873, 0.9663],
+            ["cimetech LED Stabkerzen mit Timerfunktion und Fernbedienung 8 Stück Batteriebetriebene Fensterkerzen mit Kerzenhalter LED Flammenlose Spitzkerzen Outdoor Dimmbar für Weihnachtsdeko", "春秋欧洲_DE", "蜡烛灯", "郑春燕", 5053.42, 0, 0, -0.344, -1738.34, 31, 11, 90676, 290, 0.0032, -643.63, 1032.61, -0.6233, -2.22, -0.1274, 0.2043],
+            ["HOPFROG 60 Pouces Écran de Projection Portable, Tissu Soie de Lave Lavable Antirides, 16:9 4K HD Double Face Pliable pour Camping Extérieur et Cinéma Maison, Installation Facile avec Crochets", "火烈鸟欧洲_FR", "幕布", "张志鹏", 3782.38, -407.38, 0.1111, -0.0403, -152.55, 27, 26, 14997, 381, 0.0254, -937.81, 4054.58, -0.2313, -2.46, -0.2479, 1.072],
+            ["cimetech Vetro marrone Candele LED Senza Fiamma Reale, 4,5,6 pollici Set di 3, Candele elettriche a batteria con timer e telecomando Decorazione Casa, Ristorante, Ufficio, Ambiente Romantico e Caldo", "春秋欧洲_IT", "蜡烛灯", "郑春燕", 3550.7, 0, 0, -0.0454, -161.05, 27, 15, 99417, 404, 0.0041, -864.52, 2044.41, -0.4229, -2.14, -0.2435, 0.5758],
+            ["PINKCAT 2.4G+Bluetooth Dual Mode Wireless Keyboard for Tablet, Rechargeable Ultra-Thin Portable Keyboard with UK Layout for iPad Pro/Windows – Office & Travel", "致新欧洲_UK", "键盘", "高杰", 3476.22, -127.57, 0.037, -0.0704, -244.75, 27, 22, 14757, 173, 0.0117, -1569.64, 3128.74, -0.5017, -9.07, -0.4515, 0.9],
+            ["Tavoletta Grafica 12 Pollici Regalo Bambina 3 4 5 6 7 8 9 Anni Calendario Avvento 2025 Regali Natale Bambini Giochi Bambina Gadget Compleanno Libri da Colorare", "春秋欧洲_IT", "手写板", "张志鹏", 1793.4, 0, 0, -0.1732, -310.65, 24, 13, 25143, 139, 0.0055, -402.48, 973.06, -0.4136, -2.9, -0.2244, 0.5426],
+            ["cimetech Podkładka pod mysz, 3 mm podkładka pod mysz komputerową z wysokiej jakości teksturą, antypoślizgowa gumowa podstawa, mała przenośna podkładka pod mysz do biura i gier - czarna", "春秋欧洲_PL", "鼠标垫", "李燕", 725.31, -16.36, 0.0455, 0.4516, 327.53, 22, 14, 19607, 128, 0.0065, -190.97, 489.93, -0.3898, -1.49, -0.2633, 0.6755],
+            ["cimetech Maus Kabellos USB C Mouse Slim Beidhändig 2.4G Leise Mini Maus Kabellos Silent Mouse für Mac Laptop PC Computer Tablet Tragbar", "春秋欧洲_DE", "鼠标", "郑春燕", 1441.15, -71.74, 0.0526, 0.179, 258.01, 19, 4, 13129, 31, 0.0024, -118.79, 469.57, -0.253, -3.83, -0.0824, 0.3258],
+            ["cimetech Kabelloser Ziffernblock, 2,4 G Tragbarer, Ergonomischer Mini-Nummernblock mit USB-Empfänger, 18 Tasten, Office-Rechennummernblöcke für Laptop, Notebook, Desktop, Computer, PC (Schwarz)", "春秋欧洲_DE", "数字键盘", "郑春燕", 2217.39, -260.87, 0.1176, 0.3077, 682.39, 17, 0, 307, 1, 0.0033, -1.4, 0, "--", -1.4, -0.0006, 0],
+            ["PINKCAT Wireless Keyboard, Upgraded Office Keyboard Ergonomic USB Keyboards with Number Pad, Silent compact Travel Design for PC, Laptop, Desktop, Windows 10/8/7/XP (Black)", "致新欧洲_UK", "键盘", "高杰", 1777.75, -381.8, 0.2353, -0.2896, -514.76, 17, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Wireless Mouse, 6 Buttons Mouse Silent Efficient Design, Suitable for Hand Size & Comfortable Grip, Office Mouse for Laptop PC Computer Tablets Windows Linux, 3 Adjustment Levels, Blue", "春秋欧洲_UK", "鼠标", "高杰", 1127.84, -63.69, 0.0588, 0.0762, 85.89, 17, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Tavoletta Grafica LCD Scrittura,PINKCAT 12 Pollici Lavagna da Disegno Digitale Portatile Ewriter Cancellabile Disegno Pad Writing Tablet per Bambini Adulti della Casa Scuola Esterno Ufficio", "致新欧洲_IT", "手写板", "张志鹏", 1329.27, 0, 0, -0.3105, -412.69, 17, 3, 52878, 63, 0.0012, -155.98, 235.33, -0.6628, -2.48, -0.1173, 0.177],
+            ["cimetech Gaming Mouse Pad 800 * 300 * 3 MM, Extended Large Mouse Mat Computer Keyboard Desk Pad with Anti-Slip Rubber Base Comfortable Waterproof Soft Cloth, Improved Precision and Speed - Black", "春秋欧洲_UK", "鼠标垫", "高杰", 970.36, -264.14, 0.2667, -0.1561, -151.52, 15, 19, 36994, 20, 0.0005, -156.4, 1064.5, -0.1469, -7.82, -0.1612, 1.097],
+            ["Telo Proiettore 60 Pollici,HOPFROG Schermo Proiettore Muro 16:9 HD 4K Projector Screen Portatile Anti Rughe Pieghevole Schermo Doppia Faccia per Letto Esterno Eventi Casa", "火烈鸟欧洲_IT", "幕布", "张志鹏", 2764.67, -171.74, 0.0714, 0.0635, 175.65, 14, 2, 5380, 76, 0.0141, -171.51, 388.04, -0.442, -2.26, -0.062, 0.1404],
+            ["cimetech Maus Kabellos USB C, Slim Beidhändig 2.4G Leise Mini Maus Kabellos 3 DPI Einstellbar Silent Mouse für Mac Laptop PC Computer Tablet Tragbar", "春秋欧洲_DE", "鼠标", "郑春燕", 1359.39, -502.17, 0.3571, 0.0252, 34.23, 14, 5, 14794, 26, 0.0018, -105.67, 326.01, -0.3241, -4.06, -0.0777, 0.2398],
+            ["cimetech Wireless Mouse, 6 Buttons Mouse Silent Efficient Design, Suitable for Hand Size & Comfortable Grip, Office Mouse for Laptop PC Computer Tablets Windows Linux, 3 Adjustment Levels,Gray", "春秋欧洲_UK", "鼠标", "高杰", 498.02, -115.32, 0.2308, -0.0624, -31.05, 13, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Tastatur Kabellos Bluetooth, USB A 2,4GHz Funk Tastaturen mit Telefonhalter,Numpad,Multimedia Tasten,Schlafmodus,3 Kanälen Multi-Device, für Mac, ipad,PC,Smartphone,QWERTZ Deutsche Layout", "春秋欧洲_DE", "键盘", "郑春燕", 1490.92, -352.17, 0.1818, -0.4539, -676.71, 11, 11, 140512, 274, 0.002, -606.91, 2614.44, -0.2321, -2.21, -0.4071, 1.7536],
+            ["Tableau à gribouiller coloré de 12 Pouces pour Enfants, Tableau d'écriture LCD pour Doodle, Jouets de Dessin pour 3 4 5 6 7 Ans, Cadeau pour Les Enfants", "春秋欧洲_FR", "手写板", "张志鹏", 751.71, 0, 0, 0.2203, 165.64, 10, 1, 17854, 24, 0.0013, -106.21, 77.56, -1.3694, -4.43, -0.1413, 0.1032],
+            ["PINKCAT – 100 sztuk klocków magnetycznych, klocki do budowania różowego zamku dla dzieci, zabawki sensoryczne STEM dla maluchów, zabawka niezbędna w podróży, dla dziewczynek w wieku 3–12 lat", "致新欧洲_PL", "磁力方块", "李燕", 1295.8, -275.74, 0.2222, 0.1645, 213.1, 9, 4, 38769, 168, 0.0043, -231.54, 647.5, -0.3576, -1.38, -0.1787, 0.4997],
+            ["Spielzeug ab 3 4 5 6 7 8 9 Jahre,cimetech LCD Schreibtafel Kinder 8,5 Zoll Maltafel Adventskalender 2025 Spiele Weihnachten Geschenk Mädchen Jungen Malen Nach Zahlen", "春秋欧洲_DE", "手写板", "张志鹏", 521.2, 0, 0, 0.1117, 58.22, 9, 1, 8526, 16, 0.0019, -67.86, 52.1, -1.3025, -4.24, -0.1302, 0.1],
+            ["cimetech Maus Kabellos Ergonomisch, 2.4G DPI Einstellbar Kabellos 6 Tasten Anpassbare Seitentasten, 3 DPI-Pegel Einstellbar für PC Laptop iMac MacBook Microsoft Pro, Office Home", "春秋欧洲_DE", "鼠标", "郑春燕", 639.05, -136.88, 0.2222, -0.469, -299.68, 9, 7, 35936, 131, 0.0036, -224.3, 513.59, -0.4367, -1.71, -0.351, 0.8037],
+            ["cimetech Flammenlose 3 LED Kerzen Pine Bark Cover mit Timerfunktion Echtwachs Flackernde Elektrische LED-Kerzensets mit Fernbedienung", "春秋欧洲_DE", "蜡烛灯", "郑春燕", 1576.79, -202.17, 0.125, -0.3724, -587.16, 8, 13, 107694, 176, 0.0016, -627.17, 1154.81, -0.5431, -3.56, -0.3978, 0.7324],
+            ["Projectorscherm, 100 inch 16:9 opvouwbaar filmscherm, eenvoudige hangbare HD-projectie, wit scherm met haken en touwen voor thuis, klaslokaal, bioscoop, buiten, binnen, openbare weergave", "火烈鸟欧洲_NL", "幕布", "张志鹏", 1212.42, 0, 0, 0.4635, 561.92, 7, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Maus und Tastatur Gaming Büro,RaceGT Tastatur Kabel RGB Beleuchtet LED Hintergrundbeleuchtung Wasserdicht 104 Tasten, Kabel Maus mit 7 Tasten 6400 DPI für PC Gamer Laptop QWERTZ (DE-Layout)", "致和欧洲_DE", "键鼠套装", "高杰", 1176.24, 0, 0, -0.4705, -553.44, 7, 0, 9960, 45, 0.0045, -87.66, 0, "--", -1.95, -0.0745, 0],
+            ["Projektorskärm, 120 tum 16:9 vikbar filmskärm enkel upphängningsbar HD-projektion vit skärm med krokar och rep för hem klassrum biografteater utomhus inomhus offentlig visning", "火烈鸟欧洲_SE", "幕布", "张志鹏", 1401.47, -224.23, 0.1667, 0.3552, 497.83, 6, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["keyboard and mouse combo wireless", "致和欧洲_UK", "键鼠套装", "高杰", 1268.2, -202.61, 0.1667, -0.1569, -198.92, 6, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Mysz bezprzewodowa, mysz komputerowa cimetech 2.4G z nanoodbiornikiem, przenośna, energooszczędna, z nanoodbiornikiem USB, 6 przycisków, regulacja 1600 DPI (Szary) (szary)", "春秋欧洲_PL", "鼠标", "李燕", 205.9, -127.57, 0.6, 0.0636, 13.09, 5, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["RaceGT Wireless Mouse, 2.4GHz Cordless for Laptop & PC/Mac - 3 Adjustable DPI, Silent USB Receiver", "致和欧洲_UK", "鼠标", "高杰", 277.48, 0, 0, -0.003, -0.83, 5, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Pizarra Magnetica Infantil 12 Pulgadas,cimetech Juguetes Niños 2 3 4 5 6 7 8 años Regalos Navidad Cumpleaños Portátil Pizarra Digital con Botón de Bloqueo,Lapiz, Cuerda Elástica, Juegos Educativos", "春秋欧洲_ES", "手写板", "张志鹏", 384.7, 0, 0, -0.2407, -92.59, 5, 3, 13407, 42, 0.0031, -219.72, 230.82, -0.9519, -5.23, -0.5711, 0.6],
+            ["HOPFROG Anti Bell Gerät Hunde, Tragbarer Antibell Ultraschall Gerät, Leistungsstarkes Hunde Bellen Stoppen, Hundebellen-Abschreckmittel für Kleine Große Hunde Innen Außenbereich Antibell Hund", "火烈鸟欧洲_DE", "止吠器", "郑春燕", 652.17, 0, 0, 0.1453, 94.73, 5, 1, 13985, 16, 0.0011, -35.95, 130.43, -0.2756, -2.25, -0.0551, 0.2],
+            ["Écran de Projection Portable de 305 cm avec Trousse de Maquillage Suspendue, écran de Film Simple à Suspendre avec Crochets, Cordes, écran de Projection vidéo", "火烈鸟欧洲_FR", "幕布", "张志鹏", 646.58, 0, 0, 0.5276, 341.15, 4, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Kids Toys, 2PCs LCD Writing Tablet Colorful Doodle Board Magnetic Drawing Pad, Boys Girls Toddlers Babys Learning Educational Toys Gifts for Birthday, Halloween, Christmas, Easter", "春秋欧洲_UK", "手写板", "张志鹏", 254.77, 0, 0.75, -0.3518, -89.62, 4, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Projectorscherm, 120 inch 16:9 opvouwbaar filmscherm, eenvoudige hangbare HD-projectie, wit scherm met haken en touwen voor thuis, klaslokaal, bioscoop, buiten, binnen, openbare weergave", "火烈鸟欧洲_NL", "幕布", "张志鹏", 769.88, 0, 0, 0.4174, 321.37, 4, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Spielzeug ab 3 4 5 6 7 8 9 Jahre,cimetech Adventskalender 2025 Kinder Maltafel Zaubertafel 12 Zoll Weihnachtsgeschenke Spiele Malen Nach Zahlen Mädchen Junge", "春秋欧洲_DE", "手写板", "张志鹏", 313.04, 0, 0, -0.49, -153.4, 4, 0, 14157, 7, 0.0005, -34.08, 0, "--", -4.87, -0.1089, 0],
+            ["RaceGT Kabellose Maus Aufladbar USB-C & USB-A, Mouse Optical Ambidextrous 2,4GHz Leise klick 3 Adjustable DPI Level mit 4 Tasten,mit EIN Aus Schalter für Computer Laptop PC MacbookPro/Air Chromebook", "致和欧洲_DE", "鼠标", "高杰", 443.32, 0, 0, 0.4651, 206.19, 4, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["RaceGT Protective Case Compatible with Switch 2, Dockable Cover Suitable for Nintendo Switch 2 2025 Transparent Back Case PC & TPU Anti-Scratches Shockproof Durable Ergonomic,One Piece Design [Nintendo Switch 2]", "致和欧洲_UK", "Switch2保护壳", "高杰", 213.33, 0, 0, -3.3731, -719.6, 4, 0, 8, 0, 0, 0, 0, "--", "--", 0, 0],
+            ["Tavoletta Grafica LCD Scrittura,PINKCAT Tavoletta Grafica Bambini 8.5 Pollici 2 Pacchi, Lavagna da Disegno Digitale Portatile, con Pulsante di Blocco, Regalo perfetto per bambini (blu+rosa)", "致新欧洲_IT", "手写板", "张志鹏", 292.55, 0, 0, -0.019, -5.57, 4, 0, 4529, 18, 0.004, -19.33, 0, "--", -1.07, -0.0661, 0],
+            ["cimetech Maus Kabellos Ergonomisch, 2.4G DPI Einstellbar Kabellos 6 Tasten Anpassbare Seitentasten, 3 DPI-Pegel Einstellbar für PC Laptop iMac MacBook Microsoft Pro, Office Home", "春秋欧洲_DE", "鼠标", "郑春燕", 254.97, 0, 0, -0.6115, -155.92, 4, 2, 21171, 29, 0.0014, -40.76, 121.97, -0.3342, -1.41, -0.1599, 0.4784],
+            ["LCD Schreibtafel Spielzeug 12 Zoll Weihnachten Geschenke", "致新欧洲_DE", "手写板", "张志鹏", 232.69, 0, 0, -0.6272, -145.95, 3, 0, 72, 0, 0, 0, 0, "--", "--", 0, 0],
+            ["PINKCAT LCD Writing Tablet, 12in Magnetic Board Kids Drawing Board Learning Educational Toy - Gift for Girls 3-6 Years (12in, Red)", "致新欧洲_UK", "手写板", "张志鹏", 224.86, 0, 0, 0.3926, 88.28, 3, 0, 791, 1, 0.0013, -1.35, 0, "--", -1.35, -0.006, 0],
+            ["VPS100 Écran de vidéoprojecteur portable de 250 cm avec trépied pour cinéma, home cinéma, bureau, réunion et publicité en extérieur", "火烈鸟欧洲_FR", "幕布", "张志鹏", 504.5, -168.17, 0.3333, 0.242, 122.08, 3, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Mauspad, PINKCAT 80 x 40 cm Schreibtischunterlage großes Mauspad für Büro, wasserdichte, rutschfeste PU-Leder Mauspad für Tastatur, Laptop, Blau", "致新欧洲_DE", "桌垫", "郑春燕", 181.21, -145.19, 0.6667, -0.401, -72.66, 3, 0, 1223, 4, 0.0033, -7.38, 0, "--", -1.84, -0.0407, 0],
+            ["RaceGT Gaming Keyboard, Ergonomic LED Keyboard Gaming Rainbow Backlit USB Full Size Keyboard with Wrist Rest Light Up Wired Gaming Keyboards for PC Mac Laptop Computer Xbox Gamer UK Layout", "致和欧洲_UK", "键盘", "高杰", 382.7, 0, 0, -0.3295, -126.08, 3, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Bluetooth Numpad, bezprzewodowa klawiatura numeryczna z 22 przyciskami, przenośna ergonomiczna mini klawiatura numeryczna do laptopa, notebooka, komputera stacjonarnego, komputera PC (czarna)", "春秋欧洲_PL", "数字键盘", "李燕", 254.56, -55.14, 0.3333, 0.3869, 98.49, 3, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Toys for Ages 2-4, LCD Writing Tablet for Kids 2 Pack, 10 Inch Coloring Books Drawing Pad, Travel Essentials Airplane Toys Road Trip Activities, No Mess Coloring Books for Toddlers 1-3", "春秋欧洲_UK", "手写板", "张志鹏", 224.86, 0, 0, -0.4458, -100.23, 3, 0, 92, 1, 0.0109, -3.06, 0, "--", -3.06, -0.0136, 0],
+            ["Mini Wireless Backlit Multimedia Keyboard with Touchpad, Rechargeable Lightweight Portable LED 2.4G Keyboard Controller with USB Receiver Remote Control for Smart TV, TV Box, Xbox, Tablets, PC, Mac", "致新欧洲_UK", "键盘", "高杰", 149.91, 0, 0, -0.0124, -1.86, 2, 0, 126, 1, 0.0079, -0.18, 0, "--", -0.18, -0.0012, 0],
+            ["Projektorduk 60 tum, HOPFROG projektor skärm vägg 16:9 HD 4K bärbar skärmprojektor anti-rynk vikbar dubbelskärm för utomhus säng hem evenemang", "火烈鸟欧洲_SE", "幕布", "张志鹏", 1085.96, 0, 0, 0.6703, 727.93, 2, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Tastatur Kabellos Ergonomische Kabellose Tastatur Flache Tasten 2,4 GHz Wireless Keyboard Funktastatur QWERTZ Layout 10m Reichweite Kompatibel mit PC, Desktop, Notebook, Laptop (Slim_Silber)", "春秋欧洲_DE", "键盘", "郑春燕", 260.87, -130.43, 0.5, -0.6475, -168.91, 2, 0, 44652, 27, 0.0006, -21.58, 0, "--", -0.8, -0.0827, 0],
+            ["Al Translation Earbuds, Real Time Language Translator Earphone, 150 Languages & 10 Offline, Two-Year Free Subscription & 4-in-1 HD Sound, Easy Use, Fast Reaction for Travel Business Learning - Black", "火烈鸟北美_US", "翻译耳机", "高杰", 407.47, 0, 0, 0.2396, 97.64, 2, 1, 3821, 12, 0.0031, -75, 407.47, -0.1841, -6.25, -0.1841, 1],
+            ["cimetech Dickes Gaming Mauspad XXL Schwarz - Großes Mousepad 800x300 mm - rutschfeste Schreibtischunterlage für Gaming und Büro - Rote Ränder - Präzises und langlebiges Large Mouse pad (5mm-XXL)", "春秋欧洲_DE", "鼠标垫", "郑春燕", 84.63, 0, 0, -0.8736, -73.93, 2, 15, 2498, 37, 0.0148, -52.87, 137.81, -0.3837, -1.43, -0.6248, 1.6284],
+            ["cimetech Wireless Mouse for Laptop, Portable Slim Silent Design for Left & Right Hand Users, Storable Nano Receiver, 800-1600 DPI, 2.4G Compact Computer Mice for MacBook, PC, Windows, Chromebook", "春秋欧洲_UK", "鼠标", "高杰", 41.98, 0, 0, 0.2627, 11.03, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Wygodna podkładka pod mysz, powierzchnia do gier, bardzo cienkie włókno, gładka, jedwab, zmywalna, do laptopa, klasyczna, 2 szt. czarna", "春秋欧洲_PL", "鼠标垫", "李燕", 29.42, 0, 0, -0.0934, -2.75, 1, 1, 4787, 14, 0.0029, -18.79, 29.42, -0.6388, -1.34, -0.6388, 1],
+            ["cimetech Tastatur Maus Set Kabellos, 2.4G Ultraslim Kabellose Tastatur mit Funkmaus, QWERTZ Deutsches Layout, 10m Reichweite, für PC, Desktop, Notebook, Laptop, Windows (Schwarz)", "春秋欧洲_DE", "键鼠套装", "郑春燕", 172.2, 0, 0, -0.6523, -112.33, 1, 0, 2238, 3, 0.0013, -2.8, 0, "--", -0.93, -0.0162, 0],
+            ["cimetech Wireless Mouse, 6 Buttons Mouse Silent Efficient Design, Suitable for Hand Size & Comfortable Grip, Office Mouse for Laptop PC Computer Tablets Windows Linux, 3 Adjustment Levels, Pinlk", "春秋欧洲_UK", "鼠标", "高杰", 53.96, 0, 0, 0.3529, 19.04, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Kabellose Maus, 2.4G Leise Computermaus Kabellose optische Mäuse für Laptop", "春秋欧洲_DE", "鼠标", "郑春燕", 58.62, -58.62, 1, -0.3577, -20.97, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["Magnettafel Kinder,PINKCAT Kinderspielzeug Maltafel Zaubertafel 12 Zoll Mädchen Geschenke 1 2 3 4 5 6 7 Jahre Jungen Zeichentablett Mal Tablet Kinder LCD Schreibtafel Drawing Tablet Malbrett Auto", "致新欧洲_DE", "手写板", "张志鹏", 91.3, 0, 0, -1.8863, -172.22, 1, 0, 18, 0, 0, 0, 0, "--", "--", 0, 0],
+            ["cimetech 12PC Led Tea Lights z timerem, elektryczne migoczące świece ledowe na baterie z pilotem zdalnego sterowania do domu, pokoju, stołu, Halloween, dekoracji świątecznych", "春秋欧洲_PL", "蜡烛灯", "李燕", 82.4, 0, 0, 0.4922, 40.56, 1, 0, 2332, 13, 0.0056, -6.5, 0, "--", -0.5, -0.0789, 0],
+            ["HOPFROG Écran de projection portable de 254 cm, lavable et anti-plis, 16:9 4K HD double face pliable pour camping en plein air et cinéma maison, installation facile avec crochets, vue à 160°", "火烈鸟欧洲_BE", "幕布", "张志鹏", 442.7, 0, 0, 0.6818, 301.85, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech 20er Christbaumkerzen Kabellos Led Schwebende Kerzen Weihnachtsbaumbeleuchtung Lichterkette Weihnachtsbaum Warmweiß Weihnachtsdeko mit Fernbedienung Timer 1.5 x 8 cm", "春秋欧洲_DE", "蜡烛灯", "郑春燕", 109.55, 0, 0, 0.6551, 71.77, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["PINKCAT Bezprzewodowa mysz, wąskie myszy optyczne, 2,4 G, USB, laptop, komputer, bezprzewodowa mysz z nano, przenośna konstrukcja i ciche kliknięcie, do Windowsa, Macbooka, Macbooka, Linux, biura, 2,4", "致新欧洲_PL", "鼠标", "李燕", 38.25, 0, 0, 0.7899, 30.21, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["cimetech Tastatur Maus Set Kabellos, 2.4G Ergonomische Funktastatur mit Maus mit Handballenauflage und Ständern Tastatur Kabellos mit Ziffernblock Funkmaus 1600DPI für Windows Computer Laptop PC", "春秋欧洲_DE", "键鼠套装", "郑春燕", 156.52, 0, 0, 0.3365, 52.67, 1, 0, 19818, 47, 0.0024, -64.29, 0, "--", -1.37, -0.4107, 0],
+            ["cimetech Tablette Dessin Enfant, 8.5 Pouces Tablette D'écriture LCD, Coloré Ardoise Magique, Jouets Enfant pour 3 4 5 6 Ans, éducatifs Christmas Birthday Gifts", "春秋欧洲_FR", "手写板", "张志鹏", 49.07, 0, 0, 0.2618, 12.85, 1, 0, 281, 0, 0, 0, 0, "--", "--", 0, 0],
+            ["HOPFROG Antibell für Hunde,Wiederaufladbares Antibell für Kleine Mittel Große Hunde", "火烈鸟欧洲_DE", "止吠器", "郑春燕", 156.52, 0, 0, -0.1954, -30.59, 1, 0, 3674, 23, 0.0063, -71.43, 0, "--", -3.11, -0.4563, 0],
+            ["AI Kopfhörer Übersetzer, 3-in-1 Sprachübersetzer Kopfhörer 150+ Sprachen mit App, 6 Übersetzungsmodi Kopfhörer mit Echtzeit Übersetzung, 48H Bluetooth 5.3 Übersetzer für Lernen, Reisen, Business", "火烈鸟欧洲_DE", "翻译耳机", "郑春燕", 117.39, 0, 0, -0.7155, -83.99, 1, 0, 19051, 33, 0.0017, -73.21, 0, "--", -2.22, -0.6237, 0],
+            ["Cimetech Bezprzewodowa klawiatura i mysz, cicha i przenośna, spersonalizowana, 2.4G, dla systemów Windows, macOS, iPadOS, Chrome, układ klawiatury US International QWERTY,purpurowy", "春秋欧洲_PL", "键鼠套装", "李燕", 147.16, 0, 0, 0.8678, 127.7, 1, 0, 0, 0, "--", 0, 0, "--", "--", 0, 0],
+            ["PINKCAT – 100 sztuk klocków magnetycznych, klocki do budowania różowego zamku dla dzieci, zabawki sensoryczne STEM dla maluchów, zabawka niezbędna w podróży, dla dziewczynek w wieku 3–12 lat", "致新欧洲_PL", "磁力方块", "李燕", 161.88, 0, 0, 0.7127, 115.37, 1, 2, 3388, 17, 0.005, -20.18, 270.06, -0.0747, -1.19, -0.1247, 1.6683]
+        ];
+
+        // ==============================
+        // 2. 工具函数
+        // ==============================
+        function safeNum(v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+
+        function safeRate(v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+
+        function sum(arr) { return arr.reduce((a, b) => a + safeNum(b), 0); }
+
+        function avg(arr) { return arr.length ? sum(arr) / arr.length : 0; }
+
+        function groupBy(arr, key) {
+            const map = {};
+            arr.forEach(row => {
+                const k = row[key] || '未知';
+                if (!map[k]) map[k] = [];
+                map[k].push(row);
+            });
+            return map;
+        }
+
+        function groupSum(arr, key, field) {
+            const g = groupBy(arr, key);
+            const res = {};
+            Object.keys(g).forEach(k => {
+                res[k] = sum(g[k].map(r => safeNum(r[field])));
+            });
+            return res;
+        }
+
+        function groupAvg(arr, key, field) {
+            const g = groupBy(arr, key);
+            const res = {};
+            Object.keys(g).forEach(k => {
+                res[k] = avg(g[k].map(r => safeNum(r[field])));
+            });
+            return res;
+        }
+
+        const data = rawData.map(row => ({
+            name: row[0] || '',
+            shop: row[1] || '',
+            category: row[2] || '',
+            operator: row[3] || '',
+            sales: safeNum(row[4]),
+            refundAmount: safeNum(row[5]),
+            refundRate: safeRate(row[6]),
+            grossMargin: safeRate(row[7]),
+            grossProfit: safeNum(row[8]),
+            units: safeNum(row[9]),
+            adOrders: safeNum(row[10]),
+            impressions: safeNum(row[11]),
+            clicks: safeNum(row[12]),
+            ctr: safeRate(row[13]),
+            adSpend: safeNum(row[14]),
+            adSales: safeNum(row[15]),
+            acos: safeRate(row[16]),
+            cpc: safeRate(row[17]),
+            spendRatio: safeRate(row[18]),
+            adSalesRatio: safeRate(row[19])
+        }));
+
+        // ==============================
+        // 3. KPI
+        // ==============================
+        function renderKPI() {
+            const totalSales = sum(data.map(d => d.sales));
+            const totalProfit = sum(data.map(d => d.grossProfit));
+            const totalUnits = sum(data.map(d => d.units));
+            const profitItems = data.filter(d => d.grossProfit > 0);
+            const lossItems = data.filter(d => d.grossProfit < 0);
+            const avgMargin = avg(data.map(d => d.grossMargin));
+
+            const container = document.getElementById('kpiContainer');
+            container.innerHTML = `
+                <div class="kpi-card"><div class="label">总销售额</div><div class="value">${totalSales.toFixed(0)}</div><div class="sub">¥</div></div>
+                <div class="kpi-card green"><div class="label">总毛利润</div><div class="value">${totalProfit.toFixed(0)}</div><div class="sub">¥</div></div>
+                <div class="kpi-card purple"><div class="label">总销量</div><div class="value">${totalUnits.toFixed(0)}</div><div class="sub">件</div></div>
+                <div class="kpi-card orange"><div class="label">平均毛利率</div><div class="value">${(avgMargin * 100).toFixed(1)}%</div><div class="sub">加权平均</div></div>
+                <div class="kpi-card rose"><div class="label">盈利商品</div><div class="value">${profitItems.length}</div><div class="sub">亏损 ${lossItems.length} 个</div></div>
+                <div class="kpi-card teal"><div class="label">商品总数</div><div class="value">${data.length}</div><div class="sub">SKU 维度</div></div>
+            `;
+        }
+
+        // ==============================
+        // 4. 图表渲染
+        // ==============================
+        let chartInstances = {};
+
+        function destroyChart(id) {
+            if (chartInstances[id]) {
+                chartInstances[id].destroy();
+                delete chartInstances[id];
+            }
+        }
+
+        function renderChart(id, type, labels, datasets, opts = {}) {
+            destroyChart(id);
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            const chart = new Chart(ctx, {
+                type: type,
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+                    scales: type === 'pie' ? {} : { y: { beginAtZero: true, grid: { color: '#f0f2f5' } },
+                        x: { grid: { display: false } } },
+                    ...opts
+                }
+            });
+            chartInstances[id] = chart;
+            return chart;
+        }
+
+        // 总览
+        function renderOverview() {
+            const catSales = groupSum(data, 'category', 'sales');
+            const catLabels = Object.keys(catSales).sort((a, b) => catSales[b] - catSales[a]);
+            const catSalesVals = catLabels.map(k => catSales[k]);
+            renderChart('catSalesChart', 'bar', catLabels.slice(0, 8), [{ label: '销售额 (¥)', data: catSalesVals.slice(0, 8),
+                backgroundColor: 'rgba(37,99,235,0.7)' }]);
+
+            const catProfit = groupSum(data, 'category', 'grossProfit');
+            const catProfitLabels = Object.keys(catProfit).sort((a, b) => catProfit[b] - catProfit[a]);
+            const catProfitVals = catProfitLabels.map(k => catProfit[k]);
+            renderChart('catProfitChart', 'bar', catProfitLabels.slice(0, 8), [{ label: '毛利润 (¥)', data: catProfitVals.slice(
+                    0, 8), backgroundColor: 'rgba(22,163,74,0.7)' }]);
+
+            const opSales = groupSum(data, 'operator', 'sales');
+            const opLabels = Object.keys(opSales);
+            const opSalesVals = opLabels.map(k => opSales[k]);
+            renderChart('opSalesChart', 'bar', opLabels, [{ label: '销售额 (¥)', data: opSalesVals, backgroundColor: [
+                    'rgba(37,99,235,0.7)', 'rgba(124,58,237,0.7)', 'rgba(245,158,11,0.7)', 'rgba(225,29,72,0.7)'
+                ] }]);
+
+            const opProfit = groupSum(data, 'operator', 'grossProfit');
+            const opProfitVals = opLabels.map(k => opProfit[k] || 0);
+            renderChart('opProfitChart', 'bar', opLabels, [{ label: '毛利润 (¥)', data: opProfitVals, backgroundColor: [
+                    'rgba(22,163,74,0.7)', 'rgba(13,148,136,0.7)', 'rgba(234,179,8,0.7)', 'rgba(239,68,68,0.7)'
+                ] }]);
+
+            const shopSales = groupSum(data, 'shop', 'sales');
+            const shopLabels = Object.keys(shopSales).sort((a, b) => shopSales[b] - shopSales[a]).slice(0, 10);
+            const shopVals = shopLabels.map(k => shopSales[k]);
+            renderChart('shopSalesChart', 'bar', shopLabels, [{ label: '销售额 (¥)', data: shopVals,
+                backgroundColor: 'rgba(99,102,241,0.7)' }]);
+        }
+
+        // Tab2: 运营人员
+        function renderOperator() {
+            const opSales = groupSum(data, 'operator', 'sales');
+            const opLabels = Object.keys(opSales);
+            const opSalesVals = opLabels.map(k => opSales[k]);
+            renderChart('opSalesChart2', 'bar', opLabels, [{ label: '销售额 (¥)', data: opSalesVals, backgroundColor: [
+                    'rgba(37,99,235,0.8)', 'rgba(124,58,237,0.8)', 'rgba(245,158,11,0.8)', 'rgba(225,29,72,0.8)'
+                ] }]);
+
+            const opProfit = groupSum(data, 'operator', 'grossProfit');
+            const opProfitVals = opLabels.map(k => opProfit[k] || 0);
+            renderChart('opProfitChart2', 'bar', opLabels, [{ label: '毛利润 (¥)', data: opProfitVals, backgroundColor: [
+                    'rgba(22,163,74,0.8)', 'rgba(13,148,136,0.8)', 'rgba(234,179,8,0.8)', 'rgba(239,68,68,0.8)'
+                ] }]);
+
+            const opUnits = groupSum(data, 'operator', 'units');
+            const opUnitsVals = opLabels.map(k => opUnits[k] || 0);
+            renderChart('opUnitsChart', 'bar', opLabels, [{ label: '销量 (件)', data: opUnitsVals, backgroundColor: [
+                    'rgba(59,130,246,0.7)', 'rgba(139,92,246,0.7)', 'rgba(251,191,36,0.7)', 'rgba(244,63,94,0.7)'
+                ] }]);
+
+            const opMargin = groupAvg(data, 'operator', 'grossMargin');
+            const opMarginVals = opLabels.map(k => (opMargin[k] || 0) * 100);
+            renderChart('opMarginChart', 'bar', opLabels, [{ label: '平均毛利率 (%)', data: opMarginVals, backgroundColor: [
+                    'rgba(16,185,129,0.8)', 'rgba(20,184,166,0.8)', 'rgba(251,146,60,0.8)', 'rgba(244,114,182,0.8)'
+                ] }]);
+
+            const rows = opLabels.map(op => {
+                const items = data.filter(d => d.operator === op);
+                const sales = sum(items.map(d => d.sales));
+                const profit = sum(items.map(d => d.grossProfit));
+                const units = sum(items.map(d => d.units));
+                const margin = avg(items.map(d => d.grossMargin)) * 100;
+                const count = items.length;
+                return { operator: op, sales, profit, units, margin, count };
+            }).sort((a, b) => b.sales - a.sales);
+            let html =
+                `<table><thead><tr><th>运营人员</th><th>商品数</th><th>销售额 (¥)</th><th>毛利润 (¥)</th><th>销量 (件)</th><th>平均毛利率</th></tr></thead><tbody>`;
+            rows.forEach(r => {
+                html +=
+                    `<tr><td><strong>${r.operator}</strong></td><td>${r.count}</td><td>${r.sales.toFixed(0)}</td><td>${r.profit.toFixed(0)}</td><td>${r.units.toFixed(0)}</td><td>${r.margin.toFixed(1)}%</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('opTableContainer').innerHTML = html;
+        }
+
+        // Tab3: 店铺
+        function renderShop() {
+            const shopSales = groupSum(data, 'shop', 'sales');
+            const shopLabels = Object.keys(shopSales).sort((a, b) => shopSales[b] - shopSales[a]).slice(0, 12);
+            const shopVals = shopLabels.map(k => shopSales[k]);
+            renderChart('shopSalesChart2', 'bar', shopLabels, [{ label: '销售额 (¥)', data: shopVals,
+                backgroundColor: 'rgba(99,102,241,0.7)' }]);
+
+            const shopProfit = groupSum(data, 'shop', 'grossProfit');
+            const shopProfitVals = shopLabels.map(k => shopProfit[k] || 0);
+            renderChart('shopProfitChart', 'bar', shopLabels, [{ label: '毛利润 (¥)', data: shopProfitVals,
+                backgroundColor: 'rgba(16,185,129,0.7)' }]);
+
+            const shopUnits = groupSum(data, 'shop', 'units');
+            const shopUnitsVals = shopLabels.map(k => shopUnits[k] || 0);
+            renderChart('shopUnitsChart', 'bar', shopLabels, [{ label: '销量 (件)', data: shopUnitsVals,
+                backgroundColor: 'rgba(251,191,36,0.7)' }]);
+
+            const shopMargin = groupAvg(data, 'shop', 'grossMargin');
+            const shopMarginVals = shopLabels.map(k => (shopMargin[k] || 0) * 100);
+            renderChart('shopMarginChart', 'bar', shopLabels, [{ label: '平均毛利率 (%)', data: shopMarginVals,
+                backgroundColor: 'rgba(244,114,182,0.7)' }]);
+
+            const allShops = Object.keys(groupSum(data, 'shop', 'sales'));
+            const rows = allShops.map(shop => {
+                const items = data.filter(d => d.shop === shop);
+                const sales = sum(items.map(d => d.sales));
+                const profit = sum(items.map(d => d.grossProfit));
+                const units = sum(items.map(d => d.units));
+                const margin = avg(items.map(d => d.grossMargin)) * 100;
+                const count = items.length;
+                return { shop, sales, profit, units, margin, count };
+            }).sort((a, b) => b.sales - a.sales).slice(0, 15);
+            let html =
+                `<table><thead><tr><th>店铺</th><th>商品数</th><th>销售额 (¥)</th><th>毛利润 (¥)</th><th>销量 (件)</th><th>平均毛利率</th></tr></thead><tbody>`;
+            rows.forEach(r => {
+                html +=
+                    `<tr><td><strong>${r.shop}</strong></td><td>${r.count}</td><td>${r.sales.toFixed(0)}</td><td>${r.profit.toFixed(0)}</td><td>${r.units.toFixed(0)}</td><td>${r.margin.toFixed(1)}%</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('shopTableContainer').innerHTML = html;
+        }
+
+        // Tab4: 商品种类
+        function renderCategory() {
+            const catSales = groupSum(data, 'category', 'sales');
+            const catLabels = Object.keys(catSales).sort((a, b) => catSales[b] - catSales[a]);
+            const catVals = catLabels.map(k => catSales[k]);
+            renderChart('catSalesChart2', 'bar', catLabels, [{ label: '销售额 (¥)', data: catVals,
+                backgroundColor: 'rgba(37,99,235,0.7)' }]);
+
+            const catProfit = groupSum(data, 'category', 'grossProfit');
+            const catProfitVals = catLabels.map(k => catProfit[k] || 0);
+            renderChart('catProfitChart2', 'bar', catLabels, [{ label: '毛利润 (¥)', data: catProfitVals,
+                backgroundColor: 'rgba(22,163,74,0.7)' }]);
+
+            const catUnits = groupSum(data, 'category', 'units');
+            const catUnitsVals = catLabels.map(k => catUnits[k] || 0);
+            renderChart('catUnitsChart', 'bar', catLabels, [{ label: '销量 (件)', data: catUnitsVals,
+                backgroundColor: 'rgba(251,191,36,0.7)' }]);
+
+            const catMargin = groupAvg(data, 'category', 'grossMargin');
+            const catMarginVals = catLabels.map(k => (catMargin[k] || 0) * 100);
+            renderChart('catMarginChart', 'bar', catLabels, [{ label: '平均毛利率 (%)', data: catMarginVals,
+                backgroundColor: 'rgba(244,114,182,0.7)' }]);
+
+            const rows = catLabels.map(cat => {
+                const items = data.filter(d => d.category === cat);
+                const sales = sum(items.map(d => d.sales));
+                const profit = sum(items.map(d => d.grossProfit));
+                const units = sum(items.map(d => d.units));
+                const margin = avg(items.map(d => d.grossMargin)) * 100;
+                const count = items.length;
+                return { category: cat, sales, profit, units, margin, count };
+            }).sort((a, b) => b.sales - a.sales);
+            let html =
+                `<table><thead><tr><th>商品种类</th><th>商品数</th><th>销售额 (¥)</th><th>毛利润 (¥)</th><th>销量 (件)</th><th>平均毛利率</th></tr></thead><tbody>`;
+            rows.forEach(r => {
+                html +=
+                    `<tr><td><strong>${r.category}</strong></td><td>${r.count}</td><td>${r.sales.toFixed(0)}</td><td>${r.profit.toFixed(0)}</td><td>${r.units.toFixed(0)}</td><td>${r.margin.toFixed(1)}%</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('catTableContainer').innerHTML = html;
+        }
+
+        // Tab5: 点击率 & 转化（广告花费按品类汇总）
+        function renderCTR() {
+            // 散点图 (保持不变)
+            const valid = data.filter(d => d.clicks > 0 && d.ctr > 0 && d.adOrders > 0);
+            const scatterData = valid.map(d => ({
+                x: d.ctr * 100,
+                y: (d.adOrders / d.clicks) * 100,
+                label: d.name.slice(0, 20)
+            }));
+            const scatterLabels = scatterData.map(d => d.label);
+            const scatterX = scatterData.map(d => d.x);
+            const scatterY = scatterData.map(d => d.y);
+
+            destroyChart('ctrConvChart');
+            const ctx = document.getElementById('ctrConvChart');
+            if (ctx) {
+                const chart = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: '商品点',
+                            data: scatterData.map(d => ({ x: d.x, y: d.y })),
+                            backgroundColor: 'rgba(37,99,235,0.6)',
+                            borderColor: 'rgba(37,99,235,0.9)',
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const idx = context.dataIndex;
+                                        return `${scatterLabels[idx] || ''}  点击率: ${scatterX[idx].toFixed(2)}%  转化率: ${scatterY[idx].toFixed(2)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: '点击率 (%)' }, beginAtZero: true },
+                            y: { title: { display: true, text: '转化率 (广告订单/点击) (%)' }, beginAtZero: true }
+                        }
+                    }
+                });
+                chartInstances['ctrConvChart'] = chart;
+            }
+
+            // 品类平均点击率
+            const catCtr = groupAvg(data, 'category', 'ctr');
+            const catCtrLabels = Object.keys(catCtr);
+            const catCtrVals = catCtrLabels.map(k => (catCtr[k] || 0) * 100);
+            renderChart('catCtrChart', 'bar', catCtrLabels, [{ label: '平均点击率 (%)', data: catCtrVals,
+                backgroundColor: 'rgba(59,130,246,0.7)' }]);
+
+            // 品类平均转化率
+            const catConv = {};
+            const catGroups = groupBy(data, 'category');
+            Object.keys(catGroups).forEach(cat => {
+                const items = catGroups[cat];
+                const totalClicks = sum(items.map(d => d.clicks));
+                const totalAdOrders = sum(items.map(d => d.adOrders));
+                catConv[cat] = totalClicks > 0 ? totalAdOrders / totalClicks : 0;
+            });
+            const catConvLabels = Object.keys(catConv);
+            const catConvVals = catConvLabels.map(k => (catConv[k] || 0) * 100);
+            renderChart('catConvChart', 'bar', catConvLabels, [{ label: '平均转化率 (%)', data: catConvVals,
+                backgroundColor: 'rgba(16,185,129,0.7)' }]);
+
+            // 广告花费 vs 广告销售额 (按品类汇总)
+            const catAdSpend = groupSum(data, 'category', 'adSpend');
+            const catAdSales = groupSum(data, 'category', 'adSales');
+            const categories = Object.keys(catAdSpend).filter(k => catAdSpend[k] > 0 || catAdSales[k] > 0);
+            const spendVals = categories.map(k => catAdSpend[k]);
+            const salesVals = categories.map(k => catAdSales[k]);
+            renderChart('adSpendChart', 'bar', categories, [
+                { label: '广告花费 (¥)', data: spendVals, backgroundColor: 'rgba(239,68,68,0.7)' },
+                { label: '广告销售额 (¥)', data: salesVals, backgroundColor: 'rgba(37,99,235,0.7)' }
+            ]);
+
+            // CTR TOP20 表格
+            const sorted = [...data].filter(d => d.clicks > 0).sort((a, b) => (b.ctr || 0) - (a.ctr || 0)).slice(0, 20);
+            let html =
+                `<table><thead><tr><th>商品名称</th><th>点击率</th><th>点击量</th><th>曝光量</th><th>转化率(广告订单/点击)</th><th>广告订单量</th></tr></thead><tbody>`;
+            sorted.forEach(d => {
+                const conv = d.clicks > 0 ? ((d.adOrders / d.clicks) * 100) : 0;
+                html +=
+                    `<tr><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.name.slice(0,30)}</td><td>${(d.ctr*100).toFixed(2)}%</td><td>${d.clicks.toFixed(0)}</td><td>${d.impressions.toFixed(0)}</td><td>${conv.toFixed(2)}%</td><td>${d.adOrders.toFixed(0)}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('ctrTableContainer').innerHTML = html;
+        }
+
+        // Tab6: 盈亏分析
+        // 全局状态用于表格筛选排序
+        let profitFilter = 'all'; // 'all', 'profit', 'loss'
+        let profitSortOrder = 'desc'; // 'desc', 'asc'
+
+        function renderProfit() {
+            // 饼图
+            const profitCount = data.filter(d => d.grossProfit > 0).length;
+            const lossCount = data.filter(d => d.grossProfit < 0).length;
+            const zeroCount = data.filter(d => d.grossProfit === 0).length;
+            renderChart('profitPieChart', 'pie', ['盈利', '亏损', '持平'], [{
+                data: [profitCount, lossCount, zeroCount],
+                backgroundColor: ['rgba(22,163,74,0.8)', 'rgba(239,68,68,0.8)', 'rgba(148,163,184,0.8)'],
+                borderWidth: 0
+            }]);
+
+            // 各品类盈利/亏损商品数
+            const catGroups = groupBy(data, 'category');
+            const catProfitCount = {};
+            const catLossCount = {};
+            Object.keys(catGroups).forEach(cat => {
+                const items = catGroups[cat];
+                catProfitCount[cat] = items.filter(d => d.grossProfit > 0).length;
+                catLossCount[cat] = items.filter(d => d.grossProfit < 0).length;
+            });
+            const catLabels = Object.keys(catGroups);
+            const profitCounts = catLabels.map(k => catProfitCount[k] || 0);
+            const lossCounts = catLabels.map(k => catLossCount[k] || 0);
+            renderChart('catProfitCountChart', 'bar', catLabels, [
+                { label: '盈利商品数', data: profitCounts, backgroundColor: 'rgba(22,163,74,0.7)' },
+                { label: '亏损商品数', data: lossCounts, backgroundColor: 'rgba(239,68,68,0.7)' }
+            ]);
+
+            // 盈利TOP10
+            const topProfit = [...data].filter(d => d.grossProfit > 0).sort((a, b) => b.grossProfit - a.grossProfit).slice(0,
+            10);
+            const topProfitLabels = topProfit.map(d => d.name.slice(0, 18));
+            const topProfitVals = topProfit.map(d => d.grossProfit);
+            renderChart('topProfitChart', 'bar', topProfitLabels, [{ label: '毛利润 (¥)', data: topProfitVals,
+                backgroundColor: 'rgba(22,163,74,0.8)' }]);
+
+            // 亏损TOP10
+            const topLoss = [...data].filter(d => d.grossProfit < 0).sort((a, b) => a.grossProfit - b.grossProfit).slice(0,
+            10);
+            const topLossLabels = topLoss.map(d => d.name.slice(0, 18));
+            const topLossVals = topLoss.map(d => d.grossProfit);
+            renderChart('topLossChart', 'bar', topLossLabels, [{ label: '毛利润 (¥)', data: topLossVals,
+                backgroundColor: 'rgba(239,68,68,0.8)' }]);
+
+            // 渲染表格（带控件）
+            renderProfitTable();
+        }
+
+        function renderProfitTable() {
+            let filtered = [...data];
+            if (profitFilter === 'profit') {
+                filtered = filtered.filter(d => d.grossProfit > 0);
+            } else if (profitFilter === 'loss') {
+                filtered = filtered.filter(d => d.grossProfit < 0);
+            }
+            // 排序
+            filtered.sort((a, b) => {
+                return profitSortOrder === 'desc' ? b.grossProfit - a.grossProfit : a.grossProfit - b.grossProfit;
+            });
+
+            const container = document.getElementById('profitTableContainer');
+            let html = `
+                <div class="table-controls">
+                    <span style="font-weight:500;margin-right:6px;">状态：</span>
+                    <button class="${profitFilter === 'all' ? 'active' : ''}" data-filter="all">全部</button>
+                    <button class="${profitFilter === 'profit' ? 'active' : ''}" data-filter="profit">盈利</button>
+                    <button class="${profitFilter === 'loss' ? 'active' : ''}" data-filter="loss">亏损</button>
+                    <span style="font-weight:500;margin-left:20px;margin-right:6px;">排序：</span>
+                    <button class="${profitSortOrder === 'desc' ? 'active' : ''}" data-sort="desc">毛利润 ↓</button>
+                    <button class="${profitSortOrder === 'asc' ? 'active' : ''}" data-sort="asc">毛利润 ↑</button>
+                </div>
+                <table>
+                    <thead><tr><th>商品名称</th><th>品类</th><th>销售额 (¥)</th><th>毛利润 (¥)</th><th>毛利率</th><th>状态</th></tr></thead>
+                    <tbody>
+            `;
+            const display = filtered.slice(0, 100); // 限制条数防止卡顿
+            display.forEach(d => {
+                const status = d.grossProfit > 0 ? '<span class="badge green">盈利</span>' :
+                    d.grossProfit < 0 ? '<span class="badge red">亏损</span>' :
+                    '<span class="badge yellow">持平</span>';
+                html +=
+                    `<tr><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.name.slice(0,28)}</td><td>${d.category}</td><td>${d.sales.toFixed(0)}</td><td>${d.grossProfit.toFixed(0)}</td><td>${(d.grossMargin*100).toFixed(1)}%</td><td>${status}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+
+            // 绑定事件
+            container.querySelectorAll('[data-filter]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    profitFilter = this.dataset.filter;
+                    renderProfitTable();
+                });
+            });
+            container.querySelectorAll('[data-sort]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    profitSortOrder = this.dataset.sort;
+                    renderProfitTable();
+                });
+            });
+        }
+
+        // Tab7: 明细数据
+        function renderDetail() {
+            let html =
+                `<table><thead><tr><th>商品名称</th><th>店铺</th><th>品类</th><th>运营</th><th>销售额(¥)</th><th>毛利润(¥)</th><th>销量</th><th>点击率</th><th>转化率</th><th>广告花费(¥)</th></tr></thead><tbody>`;
+            data.slice(0, 80).forEach(d => {
+                const conv = d.clicks > 0 ? ((d.adOrders / d.clicks) * 100) : 0;
+                html +=
+                    `<tr><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.name.slice(0,26)}</td><td>${d.shop}</td><td>${d.category}</td><td>${d.operator}</td><td>${d.sales.toFixed(0)}</td><td>${d.grossProfit.toFixed(0)}</td><td>${d.units.toFixed(0)}</td><td>${(d.ctr*100).toFixed(2)}%</td><td>${conv.toFixed(2)}%</td><td>${d.adSpend.toFixed(0)}</td></tr>`;
+            });
+            html +=
+                `<tr><td colspan="10" style="text-align:center;color:#94a3b8;font-size:13px;">共 ${data.length} 条记录，显示前80条</td></tr>`;
+            html += `</tbody></table>`;
+            document.getElementById('detailTableContainer').innerHTML = html;
+        }
+
+        // ==============================
+        // 5. Tab切换
+        // ==============================
+        function initTabs() {
+            const buttons = document.querySelectorAll('#tabContainer button');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabId = this.dataset.tab;
+                    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                    document.getElementById(tabId).classList.add('active');
+                    setTimeout(() => {
+                        Object.keys(chartInstances).forEach(key => {
+                            if (chartInstances[key] && chartInstances[key].resize) {
+                                chartInstances[key].resize();
+                            }
+                        });
+                    }, 100);
+                });
+            });
+        }
+
+        // ==============================
+        // 6. 初始化
+        // ==============================
+        function init() {
+            renderKPI();
+            renderOverview();
+            renderOperator();
+            renderShop();
+            renderCategory();
+            renderCTR();
+            renderProfit();
+            renderDetail();
+            initTabs();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
